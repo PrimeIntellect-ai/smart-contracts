@@ -20,6 +20,7 @@ interface ITrainingManager {
     function getTrainingRunStatus(string trainingRunId) external returns (TrainingRunStatus);
 
     /// @notice Registers compute node for training run
+    /// @dev Function not called by compute node, so registration needs knowledge of compute nodes
     function registerComputeNode(address account, string ipAddress, string trainingRunId) external returns (bool);
 
     /// @notice Returns if compute node is valid by ip
@@ -29,6 +30,7 @@ interface ITrainingManager {
     function startTrainingRun(string trainingRunId) external returns (bool);
 
     /// @notice Submits attestion that compute was utilized for training by node
+    /// @dev Function called by compute node, unlike the other functions on this interface
     function submitAttestation(address account, string trainingRunId, bytes attestation) external returns (bool);
 
     /// @notice Ends training run
