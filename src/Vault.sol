@@ -17,7 +17,6 @@ contract Vault is IVault, Ownable, ERC4626, IERC1271 {
 
     mapping(address => uint256) public tokenBalances;
     mapping(address => uint256) public shareHolder;
-    //  mapping(address => uint256) public tokenBudgets;
 
     IERC20 public token;
     uint256 public totalShares;
