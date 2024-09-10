@@ -3,9 +3,9 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract PrimeToken is ERC20, Ownable {
+contract PrimeToken is ERC20, AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     // Should we hard code this to "PrimeToken", "PRIME"
@@ -22,15 +22,11 @@ contract PrimeToken is ERC20, Ownable {
         _burn(from, amount);
     }
 
-    function grantAdminRole(
-        address account
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function grantAdminRole(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
         grantRole(ADMIN_ROLE, account);
     }
 
-    function revokeAdminRole(
-        address account
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function revokeAdminRole(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
         revokeRole(ADMIN_ROLE, account);
     }
 
@@ -38,4 +34,5 @@ contract PrimeToken is ERC20, Ownable {
     function totalSupply() public view override returns (uint256) {
         return super.totalSupply();
     }
+}
 }
