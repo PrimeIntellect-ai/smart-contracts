@@ -36,4 +36,10 @@ interface ITrainingManager {
     /// @notice Ends training run
     function endTrainingRun(string trainingRunId) external returns (bool);
 
+    /// @notice Returns the name of the training run
+    function name() external view returns (string memory);
+
+    /// @notice Returns the budget of the training run
+    function budget() external view returns (uint256 memory);
+
 }
