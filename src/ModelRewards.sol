@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./PrimeToken.sol";
 
-/// PrimeVault is a vault for Prime tokens.
 /// Users can stake Prime tokens prior to a training run [future functionality: and be slashed].
 /// The Prime Intellect protocol can allocate Prime tokens to the contract to be emitted as rewards.
 /// Prime token stakers can allocate to a Prime model to share in rewards
@@ -39,6 +38,8 @@ contract Rewards is AccessControl {
     address public owner;
     // Info of each model
     ModelInfo[] public modelInfo;
+    // minimum amount of staked Prime for rewards
+    uint256 public minStakedAmount;
 
     constructor(PrimeToken _primeToken, address _owner) public {
         primeToken = IERC20(_primeToken);
