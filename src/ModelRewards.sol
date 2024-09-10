@@ -17,20 +17,25 @@ contract Rewards is AccessControl {
     using SafeMath for uint256;
 
     struct UserInfo {
-        uint256 amount; // How many Prime tokens the user has provided.
+        uint256 amountStaked; // How many Prime tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
 
-        // Users have two options when allocating to a model, they can stake or mint
-        // pending reward = calculation to be added
-        // 
+        // Flow for staking:
+        //  1. Owner adds model to Reward contract, set rewards variables
+        //  2. User stakes Prime token to model
+        //  3. Contract gets 'modelFinished' event
+        //  4. Calculate rewards
     }
 
     // used in modelInfo[]: Stores information about each model.
     struct ModelInfo {
-        // assetId for the model
-        // how many allocation points assigned to this pool.
-        // last block 
+        uint256 modelId; // assetId for the model
+        uint256 maxReward; // max reward amount for training run.
+        uint256 attestCount; // number of attestations recorded for model
+        uint256 accPrimePerAttest; // accumulated Prime per attestation
     }
+
+    ModelInfo public _modelInfo;
 
     // The Prime Token
     PrimeToken public primeToken;
@@ -38,8 +43,16 @@ contract Rewards is AccessControl {
     address public owner;
     // Info of each model
     ModelInfo[] public modelInfo;
-    // minimum amount of staked Prime for rewards
-    uint256 public minStakedAmount;
+    // Info of each compute provider that stakes Prime tokens.
+    mapping(uint256 => mapping(address => UserInfo)) userInfo;
+    // Hours to Tokens multipler
+    uint256 public COMPUTE_MULTIPLIER = 200;
+    // min amount staked to begin training run.
+    // @dev minStakedAmount should be a percentage of maxRewards
+    uint256 public minStakedAmount = 8;
+    // max reward tokens
+    uint256 public MAX_REWARDS
+    
 
     constructor(PrimeToken _primeToken, address _owner) public {
         primeToken = IERC20(_primeToken);
@@ -53,37 +66,66 @@ contract Rewards is AccessControl {
     // Set reward variables for a model. Can only be called by the owner.
     // Model must be registered through the registration process.
     // By setting rewards, Prime Intellect indicates the model is approved.
-    function setModelRewards(
+    function AddRewardsToModel(
         uint256 modelId,
-        uint256 _allocPoint,
+        uint256 budgetAmount,
     ) public onlyOwner {
-        // to be filled out
+        // Hours budget * compute_multiplier = maxRewards
+        uint256 maxReward = multiplier.mul(budgetAmount);
+        // Set minimum amount to stake
+        // implement function to set custom minimum per model. For now global variable.
+        modelInfo.push(
+            ModelInfo({
+                modelId: _modelId,
+                maxReward: maxReward,
+                attestCount: attestationCount,
+                accPrimePerAttest: 0
+            })
+        )
     }
 
     // Update reward variables for a model.
-    function updateModelRewards(uint256 _modelId) {
-        // function to update rewards.
+    function setModelRewards(uint256 _modelId) public {
+        ModelInfo storage model = modelInfo[_modelId];
     }
     
 
     // Deposit Prime tokens to a particular model for Prime rewards.
-    function deposit(uint256 modelId, uint256 amount) external updateReward(msg.sender) {
-        ModelInfo storage model = modelInfo[_modelId];
-        // to be populated
+    function deposit(uint256 modelId, uint256 amount) external updateReward(msg.sender) moreThanZero(amount) {
+        primeTokenSupply += amount;
+        primeTokenBalances[msg.sender] += amount;
+        emit Staked(msg.sender, amount);
+        bool success = primeToken.safeTransferFrom(msg.sender, address(this), amount);
+        if (!success) {
+            revert TransferFailed();
+        }
     }
     
 
     function withdraw(uint256 _modelId, uint256 amount) external updateReward(msg.sender) {
         // check flag that user is able to withdraw
-        // decrement amount from total staked to model
-        // decrement balances[msg.sender] -= amount;
-        // bool success = primeToken.transfer(msg.sender, amount);
-        // if (!success) {
-        // revert TransferFailed();}
+        s_totalSupply -= amount;
+        s_balances[msg.sender] -= amount;
+        emit WithdrewStake(msg.sender, amount);
+        bool success = primeToken.transfer(msg.sender, amount);
+        if (!success) {
+            revert TransferFailed();
+        }
     }
 
-    function claimReward() updateReward(msg.sender) nonReentrant {
+    function claimReward() external updateReward(msg.sender) nonReentrant {
         // The contract is going to 
+    }
+
+    modifier moreThanZero(uint256 amount) {
+        if (amount == 0) {
+            revert NeedsMoreThanZero();
+        }
+        _;
+    }
+
+    function getModelBudget(uint256 modelId) public view returns (uint256) {
+        returns budget[modelId];
     }
 
 }
