@@ -45,7 +45,7 @@ contract Rewards is AccessControl {
         transferOwnership(_owner);
     }
 
-    function getmodels() external view returns (uint256) {
+    function getModelCount() external view returns (uint256) {
         return modelInfo.length;
     }
 
