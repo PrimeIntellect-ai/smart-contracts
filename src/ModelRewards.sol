@@ -52,7 +52,7 @@ contract Rewards is AccessControl {
     uint256 public minStakedAmount = 8;
     // max reward tokens
     uint256 public MAX_REWARDS
-    
+
 
     constructor(PrimeToken _primeToken, address _owner) public {
         primeToken = IERC20(_primeToken);
@@ -88,7 +88,7 @@ contract Rewards is AccessControl {
     function setModelRewards(uint256 _modelId) public {
         ModelInfo storage model = modelInfo[_modelId];
     }
-    
+
 
     // Deposit Prime tokens to a particular model for Prime rewards.
     function deposit(uint256 modelId, uint256 amount) external updateReward(msg.sender) moreThanZero(amount) {
@@ -100,7 +100,7 @@ contract Rewards is AccessControl {
             revert TransferFailed();
         }
     }
-    
+
 
     function withdraw(uint256 _modelId, uint256 amount) external updateReward(msg.sender) {
         // check flag that user is able to withdraw
