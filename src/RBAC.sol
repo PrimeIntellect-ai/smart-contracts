@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract ComputeProviderManager is Ownable {
+contract RoleBasedAccessControl is AccessControl {
     mapping(address => bool) public whitelistedComputeProviders;
 
     event ComputeProviderWhitelisted(address indexed provider, bool status);
