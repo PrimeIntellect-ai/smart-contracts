@@ -3,6 +3,7 @@
 pragma solidity ^0.8.19;
 
 import {ITrainingManager} from "./interfaces/ITrainingManager.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract TrainingManager is ITrainingManager {
 
@@ -13,6 +14,7 @@ contract TrainingManager is ITrainingManager {
 
     string private _name;
     uint256 private _budget;
+    uint256 public trainingRunIdCount;
 
     /**
      * @dev Sets the values for {name} and {budget}.
@@ -38,34 +40,46 @@ contract TrainingManager is ITrainingManager {
     }
 
     function registerTrainingRun() external returns (string) {
-        // generate unique string
-        // add string to map
-        // return string
+        trainingRunIdCount++;
+        trainingRunId = Strings.toString(trainingRunIdCount);
+        trainingRunStatuses[trainingRunId] = TrainingRunStatus.Registered;
+        return trainingRunId;
     }
 
     function getTrainingRunStatus(string trainingRunId) external returns (TrainingRunStatus) {
-        // read from map
+        return trainingRunStatuses[trainingRunId];
     }
 
     function registerComputeNode(address account, string ipAddress, string trainingRunId) external returns (bool) {
-        // add to account => ip map
-        // add to trainingRunId => accountMap
+        registeredComputeNodes[account] = ipAddress;
+        trainingRunComputeNodes[trainingRunId].push(account);
+        return true;
     }
 
-    function isComputeNodeValid(string ipAddress) external returns (bool) {
-        // read from map
+    function isComputeNodeValid(address account) external returns (bool) {
+        if (registeredComputeNodes[account].isValue) return true;
+        return false;
     }
 
     function startTrainingRun(string trainingRunId) external returns (bool) {
-        // update status
+        trainingRunStatuses[trainingRunId] = TrainingRunStatus.Running;
     }
 
     function submitAttestation(address account, string trainingRunId, bytes attestation) external returns (bool) {
-        // push bytes to list
+        bool doesTrainingRunContainNodeAddress = false;
+        for (uint i = 0; i < trainingRunComputeNodes[trainingRunId].length; i++) {
+            if (account == trainingRunComputeNodes[trainingRunId][i]) {
+                doesTrainingRunContainNodeAddress = true;
+                break;
+            }
+        }
+        if (!doesTrainingRunContainNodeAddress]) return false;
+        computeAttestations[computeNodeAccount].push(attestation);
+        return true;
     }
 
     function endTrainingRun(string trainingRunId) external returns (bool) {
-        // update status
+         trainingRunStatuses[trainingRunId] = TrainingRunStatus.Done;
     }
 
 }
