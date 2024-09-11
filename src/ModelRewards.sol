@@ -7,12 +7,13 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./PrimeToken.sol";
 
-/// Users can stake Prime tokens prior to a training run [future functionality: and be slashed].
-/// The Prime Intellect protocol can allocate Prime tokens to the contract to be emitted as rewards.
-/// Prime token stakers can allocate to a Prime model to share in rewards
-/// [In the future stakers may want to trade model shares and/or receive rev share from model inference].
+/// Compute nodes will be required to maintain a minimum amount of PRIME tokens staked to the network.
+/// Compute nodes will be able to allocate their stake to training models.
+/// Compute nodes can be slashed for providing fake or faulty attestation.
+/// The Prime Intellect protocol can allocate prime intellect tokens to the contract to be emitted as rewards.
+/// Compute contributors can claim additional prime intellect tokens.
 
-contract Rewards is AccessControl {
+contract PrimeIntellect is AccessControl {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -33,6 +34,7 @@ contract Rewards is AccessControl {
         uint256 maxReward; // max reward amount for training run.
         uint256 attestCount; // number of attestations recorded for model
         uint256 accPrimePerAttest; // accumulated Prime per attestation
+        bool fundsfrozen; // flag to indicate if user can deposit/withdraw
     }
 
     ModelInfo public _modelInfo;
@@ -47,29 +49,43 @@ contract Rewards is AccessControl {
     mapping(uint256 => mapping(address => UserInfo)) userInfo;
     // Hours to Tokens multipler
     uint256 public COMPUTE_MULTIPLIER = 200;
+    // state variable for USD
+    uint256 public USD = 100;
     // min amount staked to begin training run.
     // @dev minStakedAmount should be a percentage of maxRewards
-    uint256 public minStakedAmount = 8;
+    uint256 public minStaked;
     // max reward tokens
-    uint256 public MAX_REWARDS
+    uint256 public MAX_REWARD_MULTIPLIER
 
 
-    constructor(PrimeToken _primeToken, address _owner) public {
+    constructor(PrimeToken _primeToken, address _owner, uint256 _budgetHours) {
         primeToken = IERC20(_primeToken);
         transferOwnership(_owner);
+        budgetHours = _budgetHours:
+        _setupRole(DEFAULT_ADMIN_ROLE, _owner);
+        updateMinStaked();
     }
 
     function getmodels() external view returns (uint256) {
         return modelInfo.length;
     }
 
+    function updateMinStaked() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        minStaked = budgetHours.mul(COMPUTE_MULTIPLIER).div(USD);
+    }
+
+    function setComputeMultipier(uint256 _computeMultiplier) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        COMPUTE_MULTIPLIER = _computeMultiplier;
+        updateMinStaked();
+    }
+
     // Set reward variables for a model. Can only be called by the owner.
     // Model must be registered through the registration process.
     // By setting rewards, Prime Intellect indicates the model is approved.
-    function AddRewardsToModel(
-        uint256 modelId,
-        uint256 budgetAmount,
-    ) public onlyOwner {
+    function ApproveForRewards(
+        uint256 modelId
+    ) public onlyOwner(DEFAULT_ADMIN_ROLE) {
+        // Set minimum stake
         // Hours budget * compute_multiplier = maxRewards
         uint256 maxReward = multiplier.mul(budgetAmount);
         // Set minimum amount to stake
@@ -79,10 +95,12 @@ contract Rewards is AccessControl {
                 modelId: _modelId,
                 maxReward: maxReward,
                 attestCount: attestationCount,
-                accPrimePerAttest: 0
+                accPrimePerAttest: 0,
             })
         )
     }
+
+    min
 
     // Update reward variables for a model.
     function setModelRewards(uint256 _modelId) public {
@@ -91,7 +109,9 @@ contract Rewards is AccessControl {
 
 
     // Deposit Prime tokens to a particular model for Prime rewards.
-    function deposit(uint256 modelId, uint256 amount) external updateReward(msg.sender) moreThanZero(amount) {
+    function StakeToModel(uint256 modelId, uint256 amount, address to) public {
+        // check flag that user is able to deposit
+        ModelInfo memory model
         primeTokenSupply += amount;
         primeTokenBalances[msg.sender] += amount;
         emit Staked(msg.sender, amount);
@@ -104,8 +124,8 @@ contract Rewards is AccessControl {
 
     function withdraw(uint256 _modelId, uint256 amount) external updateReward(msg.sender) {
         // check flag that user is able to withdraw
-        s_totalSupply -= amount;
-        s_balances[msg.sender] -= amount;
+        primeTotalSupply -= amount;
+        primeTokenBalances[msg.sender] -= amount;
         emit WithdrewStake(msg.sender, amount);
         bool success = primeToken.transfer(msg.sender, amount);
         if (!success) {
