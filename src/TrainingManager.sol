@@ -41,16 +41,25 @@ contract TrainingManager is ITrainingManager {
         return _budget;
     }
 
+    /**
+     * @dev Initializes a new training run
+     */
     function registerTrainingRun() external returns (uint256) {
         trainingRunIdCount++;
         trainingRunStatuses[trainingRunIdCount] = ModelStatus.Registered;
         return trainingRunIdCount;
     }
 
+    /**
+     * @dev Returns status of training run
+     */
     function getTrainingRunStatus(uint256 trainingRunId) external view returns (ModelStatus) {
         return trainingRunStatuses[trainingRunId];
     }
 
+    /**
+     * @dev Registers compute node for training run
+     */
     function registerComputeNode(address account, string memory ipAddress, uint256 trainingRunId) external returns (bool) {
         registeredComputeNodes[account] = ipAddress;
         registeredValidComputeNodes[account] = true;
@@ -58,15 +67,24 @@ contract TrainingManager is ITrainingManager {
         return true;
     }
 
+    /**
+     * @dev Checks if a compute node has been added
+     */
     function isComputeNodeValid(address account) external view returns (bool) {
         return registeredValidComputeNodes[account];
     }
 
+    /**
+     * @dev Starts training run
+     */
     function startTrainingRun(uint256 trainingRunId) external returns (bool) {
         trainingRunStatuses[trainingRunId] = ModelStatus.Running;
         return true;
     }
 
+    /**
+     * @dev Submit attestation
+     */
     function submitAttestation(address account, uint256 trainingRunId, bytes memory attestation) external returns (bool) {
         bool doesTrainingRunContainNodeAddress = false;
         for (uint i = 0; i < trainingRunComputeNodes[trainingRunId].length; i++) {
@@ -80,14 +98,23 @@ contract TrainingManager is ITrainingManager {
         return true;
     }
 
+    /**
+     * @dev Returns addresses of compute nodes registered for a training run
+     */
     function getComputeNodesForTrainingRun(uint256 trainingRunId) external view returns (address[] memory) {
         return trainingRunComputeNodes[trainingRunId];
     }
 
+    /**
+     * @dev Returns attestations of a compute node
+     */
     function getAttestationsForComputeNode(address account) external view returns (bytes[] memory) {
         return computeAttestations[account];
     }
 
+    /**
+     * @dev Ends training run
+     */
     function endTrainingRun(uint256 trainingRunId) external returns (bool) {
          trainingRunStatuses[trainingRunId] = ModelStatus.Done;
          emit EndTrainingRun(trainingRunId);
