@@ -23,29 +23,13 @@ contract = web3.eth.contract(address=contract_address, abi=abi['abi'])
 
 ### 3) TEST THE CONTRACT FUNCTIONS
 
-def get_name():
-    return contract.functions.name().call()
-
-def get_budget():
-    return contract.functions.budget().call()
-
-print("Name", get_name())
-print("Budget", get_budget())
-
-"""
-% python3 -i main.py
-Connected to Anvil
-Name PrimeIntellectReward
-Symbol PRIME
-"""   
-
 # register: model trainer
 pub_key = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
 pri_key = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 chain_id = web3.eth.chain_id
 caller = pub_key
 nonce = web3.eth.get_transaction_count(caller)
-call_function = contract.functions.registerTrainingRun().build_transaction({"chainId": chain_id, "from": caller, "nonce": nonce})
+call_function = contract.functions.registerTrainingRun("test", 10).build_transaction({"chainId": chain_id, "from": caller, "nonce": nonce})
 signed_tx = web3.eth.account.sign_transaction(call_function, private_key=pri_key)
 send_tx = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 tx_receipt = web3.eth.wait_for_transaction_receipt(send_tx)
