@@ -21,7 +21,10 @@ contract TrainingManager is ITrainingManager {
     /**
      * @dev Initializes a new training run
      */
-    function registerTrainingRun(string memory name, uint256 budget) external returns (uint256) {
+    function registerTrainingRun(
+        string memory name,
+        uint256 budget
+    ) external returns (uint256) {
         trainingRunIdCount++;
         trainingRunStatuses[trainingRunIdCount] = ModelStatus.Registered;
         trainingRunNames[trainingRunIdCount] = name;
@@ -53,7 +56,11 @@ contract TrainingManager is ITrainingManager {
     /**
      * @dev Registers compute node for training run
      */
-    function registerComputeNode(address account, string memory ipAddress, uint256 trainingRunId) external returns (bool) {
+    function registerComputeNode(
+        address account,
+        string memory ipAddress,
+        uint256 trainingRunId
+    ) external returns (bool) {
         registeredComputeNodes[account] = ipAddress;
         registeredValidComputeNodes[account] = true;
         trainingRunComputeNodes[trainingRunId].push(account);
@@ -78,7 +85,12 @@ contract TrainingManager is ITrainingManager {
     /**
      * @dev Submit attestation
      */
-    function submitAttestation(address account, uint256 trainingRunId, bytes memory attestation) external returns (bool) {
+    function submitAttestation(
+        address account,
+        uint256 trainingRunId,
+        bytes memory attestation
+    ) external returns (bool) {
+        // TODO: adjust this for many training runs + gas optimization
         bool doesTrainingRunContainNodeAddress = false;
         for (uint i = 0; i < trainingRunComputeNodes[trainingRunId].length; i++) {
             if (account == trainingRunComputeNodes[trainingRunId][i]) {
