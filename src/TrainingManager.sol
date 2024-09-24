@@ -9,6 +9,12 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract TrainingManager is ITrainingManager, StakingManager, AccessControl {
     StakingManager public stakingManager;
 
+    struct TrainingRunInfo {
+        uint256 trainingRunId;
+        address computeNode;
+        string ipAddress;
+    }
+
     mapping(uint256 trainingRunId => ModelStatus status)
         private trainingRunStatuses;
     mapping(uint256 trainingRunId => string name) private trainingRunNames;
@@ -33,11 +39,6 @@ contract TrainingManager is ITrainingManager, StakingManager, AccessControl {
         uint256 trainingRunId
     );
 
-    struct TrainingRunInfo {
-        uint256 trainingRunId;
-        address computeNode;
-        string ipAddress;
-    }
 
     //////////////////////////////////////
     ////           MODEL OWNERS        ///
@@ -99,7 +100,7 @@ contract TrainingManager is ITrainingManager, StakingManager, AccessControl {
         address account,
         string memory ipAddress,
         uint256 trainingRunId
-    ) external returns (bool) {
+    ) external returns (bytes32) {
         // check that account has minimum staked
         require(
             stakingManager.getTotalBalance(account) >=
@@ -107,6 +108,30 @@ contract TrainingManager is ITrainingManager, StakingManager, AccessControl {
             "Insufficent staked balance"
         );
         require(string(ipAddress).length > 0, "IP address cannot be empty");
+
+        bytes32 trainingHash = keccak256(abi.encodePacked(
+            account,
+            ipAddress,
+            trainingRunId,
+            msg.sender,
+            block.timestamp,
+        ));
+
+        TrainingRunInfo memory newTrainingRun = TrainingRunInfo({
+            trainingRunId: trainingRunId,
+            computeNode: computeNode,
+            ipAddress: ipAddress,
+            initiator: msg.sender,
+            timestamp: block.timestamp,
+            trainingHash: trainingHash
+        });
+
+        trainingRuns[trainingHash] = newTrainingRun;
+        computeNodeTrainingHashes[computeNode].push(trainingHash);
+
+        emit TrainingRunJoined(trainingHash, trainingRunId, computeNode);
+
+        return trainingHash;
 
         registeredComputeNodes[account] = ipAddress;
         registeredValidComputeNodes[account] = true;
