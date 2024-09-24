@@ -21,17 +21,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
         address[] computeNodesArray;
     }
 
-    mapping(uint256 trainingRunId => ModelStatus status) private trainingRunStatuses;
-    mapping(uint256 trainingRunId => string name) private trainingRunNames;
-    mapping(uint256 trainingRunId => uint256 budget) private trainingRunBudgets;
-    mapping(address computeNodeAccount => string ipAddress) private registeredComputeNodes;
-    mapping(address computeNodeAccount => bool validNode) private registeredValidComputeNodes;
-    mapping(uint256 trainingRunId => address[] computeNodes) private trainingRunComputeNodes;
-    mapping(address computeNodeAccount => bytes[] attestations) private computeAttestations;
-
-    uint256 public trainingRunIdCount;
-
-
     mapping(uint256 => TrainingRunInfo) internal trainingRunData;
 
 
@@ -42,9 +31,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
     mapping(address => bool) private registeredValidComputeNodes;
     mapping(uint256 => address[]) private trainingRunComputeNodes;
     mapping(address => bytes[]) private computeAttestations;
-
-    mapping(bytes32 => TrainingRunInfo) internal trainingRuns;
-    mapping(address => bytes32[]) public computeNodeTrainingHashes;
 
     uint256 public trainingRunIdCount;
 
