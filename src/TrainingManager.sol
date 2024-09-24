@@ -2,33 +2,35 @@
 
 pragma solidity ^0.8.19;
 
-import {ITrainingManager} from "./interfaces/ITrainingManager.sol";
-import {StakingManager} from "./StakingManager.sol";
+import "./interfaces/ITrainingManager.sol";
+import "./StakingManager.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract TrainingManager is ITrainingManager, StakingManager, AccessControl {
+contract TrainingManager is ITrainingManager, AccessControl {
     StakingManager public stakingManager;
 
-    struct TrainingRunInfo {
-        uint256 trainingRunId;
-        address computeNode;
-        string ipAddress;
+    struct ComputeNodeInfo {
+        bool isRegistered;
+        bytes[] attestations;
+        uint256 index; // index in the computeNodesArray
     }
 
-    mapping(uint256 trainingRunId => ModelStatus status)
-        private trainingRunStatuses;
-    mapping(uint256 trainingRunId => string name) private trainingRunNames;
-    mapping(uint256 trainingRunId => uint256 budget) private trainingRunBudgets;
-    mapping(address computeNodeAccount => string ipAddress)
-        private registeredComputeNodes;
-    mapping(address computeNodeAccount => bool validNode)
-        private registeredValidComputeNodes;
-    mapping(uint256 trainingRunId => address[] computeNodes)
-        private trainingRunComputeNodes;
-    mapping(address computeNodeAccount => bytes[] attestations)
-        private computeAttestations;
+    struct TrainingRunInfo {
+        mapping(address => ComputeNodeInfo) computeNodes;
+        address[] computeNodesArray;
+    }
 
-    mapping(bytes32 => TrainingRunInfo) public trainingRuns;
+    mapping(uint256 => TrainingRunInfo) internal trainingRunData;
+
+    mapping(uint256 => ModelStatus) private trainingRunStatuses;
+    mapping(uint256 => string) private trainingRunNames;
+    mapping(uint256 => uint256) private trainingRunBudgets;
+    mapping(address => string) private registeredComputeNodes;
+    mapping(address => bool) private registeredValidComputeNodes;
+    mapping(uint256 => address[]) private trainingRunComputeNodes;
+    mapping(address => bytes[]) private computeAttestations;
+
+    mapping(bytes32 => TrainingRunInfo) internal trainingRuns;
     mapping(address => bytes32[]) public computeNodeTrainingHashes;
 
     uint256 public trainingRunIdCount;
@@ -39,99 +41,68 @@ contract TrainingManager is ITrainingManager, StakingManager, AccessControl {
         uint256 trainingRunId
     );
 
+    constructor(StakingManager _stakingManager) {
+        stakingManager = _stakingManager;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
 
     //////////////////////////////////////
     ////           MODEL OWNERS        ///
     //////////////////////////////////////
 
-    ///@dev Initializes a new model
     function registerModel(
-        string memory name,
-        uint256 budget
-    ) external returns (uint256) {
+        string memory _name,
+        uint256 _budget
+    ) external override returns (uint256) {
         trainingRunIdCount++;
         trainingRunStatuses[trainingRunIdCount] = ModelStatus.Registered;
-        trainingRunNames[trainingRunIdCount] = name;
-        trainingRunBudgets[trainingRunIdCount] = budget;
+        trainingRunNames[trainingRunIdCount] = _name;
+        trainingRunBudgets[trainingRunIdCount] = _budget;
         return trainingRunIdCount;
     }
 
-    /**
-     * @dev Returns status of training run
-     */
-    function getTrainingRunStatus(
+    /// @notice returns status of training run
+    function getModelStatus(
         uint256 trainingRunId
-    ) external view returns (ModelStatus) {
+    ) external view override returns (ModelStatus) {
         return trainingRunStatuses[trainingRunId];
     }
 
-    /**
-     * @dev Returns the name of the training run.
-     */
+    /// @notice returns the name of the training run
     function name(
         uint256 trainingRunId
-    ) public view virtual returns (string memory) {
+    ) public view override returns (string memory) {
         return trainingRunNames[trainingRunId];
     }
 
-    /**
-     * @dev Returns the budget for the training run
-     */
+    /// @notice Returns the budget for the training run
     function budget(
         uint256 trainingRunId
-    ) public view virtual returns (uint256) {
-        return trainingBudgets[trainingRunId];
+    ) public view override returns (uint256) {
+        return trainingRunBudgets[trainingRunId];
     }
 
     //////////////////////////////////////
     ////      COMPUTE PROVIDERS        ///
     //////////////////////////////////////
 
-    function isComputeNodeValid(address account) public view returns (bool) {
-        bool computeNodeIsRegistered = registeredComputeNodes[account];
-        return computeNodeIsRegistered;
+    function isComputeNodeValid(
+        address account
+    ) public view override returns (bool) {
+        return registeredValidComputeNodes[account];
     }
 
-    /**
-     * @dev Registers compute node for training run
-     * @notice Compute node must have at least minimum PIN staked
-     */
-    function joinTrainingRun(
+    function registerForTrainingRun(
         address account,
         string memory ipAddress,
         uint256 trainingRunId
-    ) external returns (bytes32) {
-        // check that account has minimum staked
+    ) external override returns (bool) {
         require(
-            stakingManager.getTotalBalance(account) >=
+            stakingManager.getComputeNodeBalance(account) >=
                 stakingManager.MIN_DEPOSIT(),
-            "Insufficent staked balance"
+            "Insufficient staked balance"
         );
-        require(string(ipAddress).length > 0, "IP address cannot be empty");
-
-        bytes32 trainingHash = keccak256(abi.encodePacked(
-            account,
-            ipAddress,
-            trainingRunId,
-            msg.sender,
-            block.timestamp,
-        ));
-
-        TrainingRunInfo memory newTrainingRun = TrainingRunInfo({
-            trainingRunId: trainingRunId,
-            computeNode: computeNode,
-            ipAddress: ipAddress,
-            initiator: msg.sender,
-            timestamp: block.timestamp,
-            trainingHash: trainingHash
-        });
-
-        trainingRuns[trainingHash] = newTrainingRun;
-        computeNodeTrainingHashes[computeNode].push(trainingHash);
-
-        emit TrainingRunJoined(trainingHash, trainingRunId, computeNode);
-
-        return trainingHash;
+        require(bytes(ipAddress).length > 0, "IP address cannot be empty");
 
         registeredComputeNodes[account] = ipAddress;
         registeredValidComputeNodes[account] = true;
@@ -139,17 +110,11 @@ contract TrainingManager is ITrainingManager, StakingManager, AccessControl {
         return true;
     }
 
-    // to be deleted.
-    // function isComputeNodeValid(address account) external returns (bool) {
-    //     if (registeredComputeNodes[account].isValue) return true;
-    //     return false;
-    // }
-
     function submitAttestation(
         address account,
         uint256 trainingRunId,
         bytes memory attestation
-    ) external returns (bool) {
+    ) external override returns (bool) {
         bool doesTrainingRunContainNodeAddress = false;
         for (
             uint i = 0;
@@ -162,38 +127,53 @@ contract TrainingManager is ITrainingManager, StakingManager, AccessControl {
             }
         }
         if (!doesTrainingRunContainNodeAddress) return false;
-        computeAttestations[computeNodeAccount].push(attestation);
+        computeAttestations[account].push(attestation);
+        emit AttestationSubmitted(account, trainingRunId);
         return true;
     }
 
-    /**
-     * @dev Returns addresses of compute nodes registered for a training run
-     */
     function getComputeNodesForTrainingRun(
         uint256 trainingRunId
-    ) external view returns (address[] memory) {
+    ) external view override returns (address[] memory) {
         return trainingRunComputeNodes[trainingRunId];
     }
 
-    /**
-     * @dev Returns attestations of a compute node
-     */
     function getAttestationsForComputeNode(
         address account
-    ) external view returns (bytes[] memory) {
+    ) external view override returns (bytes[] memory) {
         return computeAttestations[account];
     }
 
-    function startTrainingRun(uint256 trainingRunId) external returns (bool) {
-        trainingRunStatuses[trainingRunId] = TrainingRunStatus.Running;
+    function getAttestations(
+        uint256 trainingRunId,
+        address computeNode
+    ) public view override returns (bool) {
+        return
+            trainingRunData[trainingRunId]
+                .computeNodes[computeNode]
+                .isRegistered;
     }
 
-    /**
-     * @dev Ends training run
-     */
-    function endTrainingRun(uint256 trainingRunId) external returns (bool) {
+    function startTrainingRun(
+        uint256 trainingRunId
+    ) external override returns (bool) {
+        trainingRunStatuses[trainingRunId] = ModelStatus.Running;
+        return true;
+    }
+
+    function endTrainingRun(
+        uint256 trainingRunId
+    ) external override returns (bool) {
         trainingRunStatuses[trainingRunId] = ModelStatus.Done;
         emit EndTrainingRun(trainingRunId);
         return true;
+    }
+
+    function getTrainingRunEndTime(
+        uint256 trainingRunId
+    ) external view override returns (uint256) {
+        // This function should return the end time of the training run
+        // For now, it's returning the current block timestamp as a placeholder
+        return block.timestamp;
     }
 }

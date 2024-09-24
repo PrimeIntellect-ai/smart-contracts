@@ -35,6 +35,19 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     // Reward rate: 1 PIN per attestation
     uint256 public constant REWARD_RATE = 1;
 
+    struct ComputeNodeInfo {
+        uint256 currentBalance; // PIN tokens not allocated to training run
+        uint256 pendingRewards; // rewards owed by the protocol
+        mapping(uint256 => uint256) attestationsPerRun; // trainingRunId => attestation count
+        uint256[] participatedRuns;
+    }
+
+    struct Challenge {
+        uint256 trainingRunId;
+        address challenger;
+        bool resolved;
+    }
+
     mapping(address => ComputeNodeInfo) public computeNodeBalances; // Mapping of compute node balances
     mapping(uint256 => uint256) public attestationsPerTrainingRun; // Mapping to track attestations per training run
     mapping(uint256 => Challenge) public challenges;
@@ -48,19 +61,6 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     );
     event Slashed(address indexed account, uint256 amount);
     event RewardsClaimed(address indexed account, uint256 amount);
-
-    struct ComputeNodeInfo {
-        uint256 currentBalance; // PIN tokens not allocated to training run
-        uint256 pendingRewards; // rewards owed by the protocol
-        mapping(uint256 => uint256) attestationsPerRun; // trainingRunId => attestation count
-        uint256[] participatedRuns;
-    }
-
-    struct Challenge {
-        uint256 trainingRunId;
-        address challenger;
-        bool resolved;
-    }
 
     constructor(
         PrimeIntellectToken _pin,
@@ -141,7 +141,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Only model owner can submit on-chain challenge.
     /// challenges posted for a specific training hash (compute provider & training run Id)
-    /// can only be called by `model_owner`
+    /// todo: can only be called by `model_owner`
     /// returns challengeId
     function challenge(
         uint256 trainingRunId,
@@ -189,7 +189,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         );
 
         balances.currentBalance -= amount;
-        PIN.burn(amount);
+        PIN.burn(account, amount);
 
         emit Slashed(account, amount);
     }
@@ -286,5 +286,12 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// @return The balance of PIN tokens held by this contract
     function getContractBalance() external view returns (uint256) {
         return PIN.balanceOf(address(this));
+    }
+
+    /// @notice Get the balance of PIN tokens held by compute node account
+    function getComputeNodeBalance(
+        address account
+    ) external view returns (uint256) {
+        return computeNodeBalances[account].currentBalance;
     }
 }
