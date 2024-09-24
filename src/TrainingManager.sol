@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract TrainingManager is ITrainingManager, AccessControl {
     StakingManager public stakingManager;
 
+
     struct ComputeNodeInfo {
         bool isRegistered;
         bytes[] attestations;
@@ -20,7 +21,19 @@ contract TrainingManager is ITrainingManager, AccessControl {
         address[] computeNodesArray;
     }
 
+    mapping(uint256 trainingRunId => ModelStatus status) private trainingRunStatuses;
+    mapping(uint256 trainingRunId => string name) private trainingRunNames;
+    mapping(uint256 trainingRunId => uint256 budget) private trainingRunBudgets;
+    mapping(address computeNodeAccount => string ipAddress) private registeredComputeNodes;
+    mapping(address computeNodeAccount => bool validNode) private registeredValidComputeNodes;
+    mapping(uint256 trainingRunId => address[] computeNodes) private trainingRunComputeNodes;
+    mapping(address computeNodeAccount => bytes[] attestations) private computeAttestations;
+
+    uint256 public trainingRunIdCount;
+
+
     mapping(uint256 => TrainingRunInfo) internal trainingRunData;
+
 
     mapping(uint256 => ModelStatus) private trainingRunStatuses;
     mapping(uint256 => string) private trainingRunNames;
@@ -110,11 +123,85 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return true;
     }
 
+
+    /**
+     * @dev Initializes a new training run
+     */
+    function registerTrainingRun(
+        string memory name,
+        uint256 budget
+    ) external returns (uint256) {
+        trainingRunIdCount++;
+        trainingRunStatuses[trainingRunIdCount] = ModelStatus.Registered;
+        trainingRunNames[trainingRunIdCount] = name;
+        trainingRunBudgets[trainingRunIdCount] = budget;
+        return trainingRunIdCount;
+    }
+
+    /**
+     * @dev Returns status of training run
+     */
+    function getTrainingRunStatus(uint256 trainingRunId) external view returns (ModelStatus) {
+        return trainingRunStatuses[trainingRunId];
+    }
+
+    /**
+     * @dev Returns the name of the training run.
+     */
+    function name(uint256 trainingRunId) public view virtual returns (string memory) {
+        return trainingRunNames[trainingRunId];
+    }
+
+    /**
+     * @dev Returns the budget for the training run
+     */
+    function budget(uint256 trainingRunId) public view virtual returns (uint256) {
+        return trainingBudgets[trainingRunId];
+    }
+
+    /**
+     * @dev Registers compute node for training run
+     */
+    function registerComputeNode(
+        address account,
+        string memory ipAddress,
+        uint256 trainingRunId
+    ) external returns (bool) {
+        registeredComputeNodes[account] = ipAddress;
+        registeredValidComputeNodes[account] = true;
+        trainingRunComputeNodes[trainingRunId].push(account);
+        return true;
+    }
+
+    /**
+     * @dev Checks if a compute node has been added
+     */
+    function isComputeNodeValid(address account) external view returns (bool) {
+        return registeredValidComputeNodes[account];
+    }
+
+    /**
+     * @dev Starts training run
+     */
+    function startTrainingRun(uint256 trainingRunId) external returns (bool) {
+        trainingRunStatuses[trainingRunId] = ModelStatus.Running;
+        return true;
+    }
+
+    /**
+     * @dev Submit attestation
+     */
+
     function submitAttestation(
         address account,
         uint256 trainingRunId,
         bytes memory attestation
+
     ) external override returns (bool) {
+
+    ) external returns (bool) {
+        // TODO: adjust this for many training runs + gas optimization
+main
         bool doesTrainingRunContainNodeAddress = false;
         for (
             uint i = 0;
@@ -128,6 +215,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         }
         if (!doesTrainingRunContainNodeAddress) return false;
         computeAttestations[account].push(attestation);
+
         emit AttestationSubmitted(account, trainingRunId);
         return true;
     }
@@ -152,6 +240,32 @@ contract TrainingManager is ITrainingManager, AccessControl {
             trainingRunData[trainingRunId]
                 .computeNodes[computeNode]
                 .isRegistered;
+
+        return true;
+    }
+
+    /**
+     * @dev Returns addresses of compute nodes registered for a training run
+     */
+    function getComputeNodesForTrainingRun(uint256 trainingRunId) external view returns (address[] memory) {
+        return trainingRunComputeNodes[trainingRunId];
+    }
+
+    /**
+     * @dev Returns attestations of a compute node
+     */
+    function getAttestationsForComputeNode(address account) external view returns (bytes[] memory) {
+        return computeAttestations[account];
+    }
+
+    /**
+     * @dev Ends training run
+     */
+    function endTrainingRun(uint256 trainingRunId) external returns (bool) {
+         trainingRunStatuses[trainingRunId] = ModelStatus.Done;
+         emit EndTrainingRun(trainingRunId);
+         return true;
+main
     }
 
     function startTrainingRun(

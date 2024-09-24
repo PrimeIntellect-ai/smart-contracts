@@ -31,9 +31,12 @@ pri_key = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 chain_id = web3.eth.chain_id
 caller = pub_key
 nonce = web3.eth.get_transaction_count(caller)
+deposit
 call_function = contract.functions.registerTrainingRun("test", 10).build_transaction(
     {"chainId": chain_id, "from": caller, "nonce": nonce}
 )
+
+call_function = contract.functions.registerTrainingRun("test", 10).build_transaction({"chainId": chain_id, "from": caller, "nonce": nonce})
 signed_tx = web3.eth.account.sign_transaction(call_function, private_key=pri_key)
 send_tx = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 tx_receipt = web3.eth.wait_for_transaction_receipt(send_tx)
@@ -47,16 +50,21 @@ node_1_priv_key = "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cda
 node_1_ip_address = "test_ip_1"
 caller = node_1_pub_key
 nonce = web3.eth.get_transaction_count(caller)
+deposit
 call_function = contract.functions.registerComputeNode(
     node_1_pub_key, node_1_ip_address, run_id
 ).build_transaction({"chainId": chain_id, "from": caller, "nonce": nonce})
 signed_tx = web3.eth.account.sign_transaction(
     call_function, private_key=node_1_priv_key
 )
+
+call_function = contract.functions.registerComputeNode(node_1_pub_key, node_1_ip_address, run_id).build_transaction({"chainId": chain_id, "from": caller, "nonce": nonce})
+signed_tx = web3.eth.account.sign_transaction(call_function, private_key=node_1_priv_key)
 send_tx = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 tx_receipt = web3.eth.wait_for_transaction_receipt(send_tx)
 # print(tx_receipt)
 run_status = contract.functions.getTrainingRunStatus(run_id).call()
+deposit
 print("Run status ", run_status)  # 0
 nodes = contract.functions.getComputeNodesForTrainingRun(run_id).call()
 print("Registered nodes ", nodes)
@@ -64,18 +72,29 @@ is_valid = contract.functions.isComputeNodeValid(node_1_pub_key).call()
 print("Is valid? ", node_1_pub_key, is_valid)  # True
 is_valid = contract.functions.isComputeNodeValid(pub_key).call()
 print("Is valid? ", node_1_pub_key, is_valid)  # False
+print("Run status ", run_status) # 0
+nodes = contract.functions.getComputeNodesForTrainingRun(run_id).call()
+print("Registered nodes ", nodes)
+is_valid = contract.functions.isComputeNodeValid(node_1_pub_key).call()
+print("Is valid? ", node_1_pub_key, is_valid) # True
+is_valid = contract.functions.isComputeNodeValid(pub_key).call()
+print("Is valid? ", node_1_pub_key, is_valid) # False
 
 # start: model trainer
 caller = pub_key
 nonce = web3.eth.get_transaction_count(caller)
+deposit
 call_function = contract.functions.startTrainingRun(run_id).build_transaction(
     {"chainId": chain_id, "from": caller, "nonce": nonce}
 )
+
+call_function = contract.functions.startTrainingRun(run_id).build_transaction({"chainId": chain_id, "from": caller, "nonce": nonce})
 signed_tx = web3.eth.account.sign_transaction(call_function, private_key=pri_key)
 send_tx = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 tx_receipt = web3.eth.wait_for_transaction_receipt(send_tx)
 # print(tx_receipt)
 run_status = contract.functions.getTrainingRunStatus(run_id).call()
+deposit
 print("Run status ", run_status)  # 1
 
 # train: compute node
@@ -97,20 +116,38 @@ for i in range(3):
     attestations = contract.functions.getAttestationsForComputeNode(
         node_1_pub_key
     ).call()
+print("Run status ", run_status) # 1
+
+# train: compute node
+import os
+caller = node_1_pub_key
+for i in range(3):
+    nonce = web3.eth.get_transaction_count(caller)
+    attestation = b"\x00"+os.urandom(4)+b"\x00"
+    call_function = contract.functions.submitAttestation(node_1_pub_key, run_id, attestation).build_transaction({"chainId": chain_id, "from": caller, "nonce": nonce})
+    signed_tx = web3.eth.account.sign_transaction(call_function, private_key=node_1_priv_key)
+    send_tx = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+    tx_receipt = web3.eth.wait_for_transaction_receipt(send_tx)
+    # print(tx_receipt)
+    attestations = contract.functions.getAttestationsForComputeNode(node_1_pub_key).call()
     print("Attestations ", attestations)
 
 # end: model trainer
 caller = pub_key
 nonce = web3.eth.get_transaction_count(caller)
+deposit
 call_function = contract.functions.endTrainingRun(run_id).build_transaction(
     {"chainId": chain_id, "from": caller, "nonce": nonce}
 )
+call_function = contract.functions.endTrainingRun(run_id).build_transaction({"chainId": chain_id, "from": caller, "nonce": nonce})
 signed_tx = web3.eth.account.sign_transaction(call_function, private_key=pri_key)
 send_tx = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 tx_receipt = web3.eth.wait_for_transaction_receipt(send_tx)
 # print(tx_receipt)
 run_status = contract.functions.getTrainingRunStatus(run_id).call()
+deposit
 print("Run status ", run_status)  # 2
+print("Run status ", run_status) # 2
 # emit
 
 """
