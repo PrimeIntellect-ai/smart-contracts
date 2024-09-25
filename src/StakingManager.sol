@@ -257,22 +257,28 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
 
         require(totalRewards > 0, "No rewards available to claim");
 
-        // Remove claimed runs from the participated runs array
-        uint256[] memory newParticipatedRuns = new uint256[](
+        uint256[] memory unclaimedRuns = new uint256[](
             nodeInfo.participatedRuns.length
         );
-        uint256 newIndex = 0;
+        uint256 unclaimedCount = 0;
+
         for (uint256 i = 0; i < nodeInfo.participatedRuns.length; i++) {
             uint256 trainingRunId = nodeInfo.participatedRuns[i];
             if (nodeInfo.attestationsPerRun[trainingRunId] > 0) {
-                newParticipatedRuns[newIndex] = trainingRunId;
-                newIndex++;
+                unclaimedRuns[unclaimedCount] = trainingRunId;
+                unclaimedCount++;
             }
         }
-        nodeInfo.participatedRuns = newParticipatedRuns;
-        nodeInfo.participatedRuns.length = newIndex;
 
-        // Mint new PIN tokens as rewards
+        uint256[] storage newParticipatedRuns = nodeInfo.participatedRuns;
+        assembly {
+            sstore(newParticipatedRuns.slot, unclaimedCount)
+        }
+
+        for (uint256 i = 0; i < unclaimedCount; i++) {
+            newParticipatedRuns[i] = unclaimedRuns[i];
+        }
+
         PIN.mint(msg.sender, totalRewards);
 
         emit RewardsClaimed(msg.sender, totalRewards);

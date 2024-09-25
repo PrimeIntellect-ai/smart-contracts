@@ -4,43 +4,34 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/StakingManager.sol";
 import "../src/PrimeIntellectToken.sol";
-import "../src/interfaces/ITrainingManager.sol";
+import "../src/TrainingManager.sol";
 
 contract StakingManagerTest2 is Test {
     StakingManager public stakingManager;
     PrimeIntellectToken public pinToken;
-    ITrainingManager public trainingManager;
+    TrainingManager public trainingManager;
 
-    address public admin = address(1);
-    address public computeNode = address(2);
+    address public admin;
+    address public computeNode;
+    PrimeIntellectToken public PIN;
     uint256 public constant INITIAL_BALANCE = 10000 ether;
     uint256 public constant MIN_DEPOSIT = 8760 ether;
     uint256 public constant STAKE_AMOUNT = 10000 ether;
     uint256 public constant TRAINING_RUN_ID = 1;
 
     function setUp() public {
-        vm.startPrank(admin);
+        admin = address(this);
+        computeNode = address(0x1);
 
-        // Deploy PrimeIntellectToken
-        pinToken = new PrimeIntellectToken("Prime Intellect", "PIN");
+        PIN = new PrimeIntellectToken("Prime Intellect Network", "PIN");
 
-        // Mock TrainingManager
-        trainingManager = ITrainingManager(address(0x123)); // Use a dummy address
+        trainingManager = new TrainingManager(stakingManager);
 
-        // Deploy StakingManager
         stakingManager = new StakingManager(
             pinToken,
             trainingManager,
             MIN_DEPOSIT
         );
-
-        // Grant ADMIN_ROLE to StakingManager in PrimeIntellectToken
-        pinToken.grantAdminRole(address(stakingManager));
-
-        // Mint initial balance to computeNode
-        pinToken.mint(computeNode, INITIAL_BALANCE);
-
-        vm.stopPrank();
     }
 
     function testStakeMoreThanMinimum() public {
