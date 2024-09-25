@@ -201,7 +201,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// @notice View function to see pending rewards on the frontend
     /// Pending rewards show up after training run ends
     /// Pending rewards include claimable and not-yet-claimable rewards
-    function pendingRewards(address account) external view returns (uint256) {
+    function pendingRewards(address account) external returns (uint256) {
         ComputeBalancesInfo storage nodeInfo = computeNodeBalances[account];
         uint256 totalPendingRewards = 0;
 
@@ -225,7 +225,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     function calculateRunRewards(
         address account,
         uint256 trainingRunId
-    ) internal view returns (bool isClaimable, uint256 rewards) {
+    ) internal returns (bool isClaimable, uint256 rewards) {
         ComputeBalancesInfo storage nodeInfo = computeNodeBalances[account];
         uint256 attestationCount = nodeInfo.attestationsPerRun[trainingRunId];
         uint256 endTime = trainingManager.getTrainingRunEndTime(trainingRunId);
@@ -241,6 +241,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     function claim() external nonReentrant whenNotPaused {
         ComputeBalancesInfo storage nodeInfo = computeNodeBalances[msg.sender];
         uint256 totalRewards = 0;
+        uint256 newLength = 0;
 
         for (uint256 i = 0; i < nodeInfo.participatedRuns.length; i++) {
             uint256 trainingRunId = nodeInfo.participatedRuns[i];
@@ -252,25 +253,22 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
             if (isClaimable) {
                 totalRewards += runRewards;
                 delete nodeInfo.attestationsPerRun[trainingRunId];
+            } else {
+                // Keep unclaimed runs
+                if (i != newLength) {
+                    nodeInfo.participatedRuns[newLength] = nodeInfo
+                        .participatedRuns[i];
+                }
+                newLength++;
             }
         }
 
         require(totalRewards > 0, "No rewards available to claim");
 
-        // Remove claimed runs from the participated runs array
-        uint256[] memory newParticipatedRuns = new uint256[](
-            nodeInfo.participatedRuns.length
-        );
-        uint256 newIndex = 0;
-        for (uint256 i = 0; i < nodeInfo.participatedRuns.length; i++) {
-            uint256 trainingRunId = nodeInfo.participatedRuns[i];
-            if (nodeInfo.attestationsPerRun[trainingRunId] > 0) {
-                newParticipatedRuns[newIndex] = trainingRunId;
-                newIndex++;
-            }
+        // Remove extra elements
+        while (nodeInfo.participatedRuns.length > newLength) {
+            nodeInfo.participatedRuns.pop();
         }
-        nodeInfo.participatedRuns = newParticipatedRuns;
-        nodeInfo.participatedRuns.length = newIndex;
 
         PIN.mint(msg.sender, totalRewards);
 

@@ -39,8 +39,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         uint256 trainingRunId
     );
 
-    constructor(StakingManager _stakingManager) {
-        stakingManager = _stakingManager;
+    constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -188,7 +187,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     function getAttestations(
         uint256 trainingRunId,
         address account
-    ) external returns (uint256) {
+    ) external view returns (uint256) {
         require(
             trainingRunStatuses[trainingRunId] != ModelStatus.Registered,
             "Training run not started"
@@ -224,13 +223,13 @@ contract TrainingManager is ITrainingManager, AccessControl {
      */
     function getAttestationsForComputeNode(
         address account
-    ) external returns (bytes[] memory) {
+    ) external view returns (bytes[] memory) {
         return computeAttestations[account];
     }
 
     function getTrainingRunEndTime(
         uint256 trainingRunId
-    ) external override returns (uint256) {
+    ) external view override returns (uint256) {
         require(
             trainingRunStatuses[trainingRunId] == ModelStatus.Done,
             "Training run has not ended"

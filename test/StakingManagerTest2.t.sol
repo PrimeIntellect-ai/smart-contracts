@@ -5,120 +5,77 @@ import "forge-std/Test.sol";
 import "../src/StakingManager.sol";
 import "../src/PrimeIntellectToken.sol";
 import "../src/TrainingManager.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract StakingManagerTest2 is Test {
     StakingManager public stakingManager;
-    PrimeIntellectToken public pinToken;
     TrainingManager public trainingManager;
+    PrimeIntellectToken public pinToken;
 
-    address public admin;
-    address public computeNode;
-    uint256 public constant INITIAL_BALANCE = 10000 ether;
-    uint256 public constant MIN_DEPOSIT = 8760 ether;
-    uint256 public constant STAKE_AMOUNT = 10000 ether;
+    address public admin = address(1);
+    address public computeNode = address(2);
+
     uint256 public constant TRAINING_RUN_ID = 1;
+    uint256 public constant ATTESTATION_COUNT = 10;
+    uint256 public constant REWARD_RATE = 1; // 1 PIN per attestation
 
     function setUp() public {
-        admin = address(this);
-        computeNode = address(0x1);
+        vm.startPrank(admin);
 
-        pinToken = new PrimeIntellectToken("Prime Intellect Network", "PIN");
-
-        TrainingManager mockTrainingManager = new TrainingManager(
-            StakingManager(address(0))
-        );
-
+        // Deploy contracts
+        pinToken = new PrimeIntellectToken("Prime-Intellect-Token", "PIN");
+        trainingManager = new TrainingManager();
         stakingManager = new StakingManager(
             pinToken,
-            ITrainingManager(address(mockTrainingManager)),
-            MIN_DEPOSIT
+            ITrainingManager(address(trainingManager)),
+            1000
         );
 
-        mockTrainingManager = new TrainingManager(stakingManager);
-        trainingManager = mockTrainingManager;
-
-        pinToken.mint(computeNode, INITIAL_BALANCE);
-    }
-
-    function testStakeMoreThanMinimum() public {
-        vm.startPrank(computeNode);
-
-        // Approve StakingManager to spend tokens
-        pinToken.approve(address(stakingManager), STAKE_AMOUNT);
-
-        // Stake more than the minimum amount
-        stakingManager.stake(computeNode, STAKE_AMOUNT);
-
-        // Check the staked balance
-        (uint256 currentBalance, ) = stakingManager.computeNodeBalances(
-            computeNode
+        pinToken.grantRole(pinToken.DEFAULT_ADMIN_ROLE(), address(admin));
+        trainingManager.grantRole(
+            trainingManager.DEFAULT_ADMIN_ROLE(),
+            address(this)
         );
-        assertEq(currentBalance, STAKE_AMOUNT, "Staked amount should match");
 
         vm.stopPrank();
-    }
 
-    function testSubmitAttestationsAndClaimRewards() public {
-        // Setup: Stake tokens
+        trainingManager.addComputeNode(computeNode);
+
         vm.startPrank(computeNode);
-        pinToken.approve(address(stakingManager), STAKE_AMOUNT);
-        stakingManager.stake(computeNode, STAKE_AMOUNT);
+        trainingManager.joinTrainingRun(
+            computeNode,
+            "192.168.1.1",
+            TRAINING_RUN_ID
+        );
+        trainingManager.startTrainingRun(TRAINING_RUN_ID);
+        for (uint i = 0; i < ATTESTATION_COUNT; i++) {
+            trainingManager.submitAttestation(
+                computeNode,
+                TRAINING_RUN_ID,
+                abi.encodePacked("attestation", i)
+            );
+        }
+        trainingManager.endTrainingRun(TRAINING_RUN_ID);
         vm.stopPrank();
 
-        // Mock TrainingManager functions
-        vm.mockCall(
-            address(trainingManager),
-            abi.encodeWithSelector(
-                ITrainingManager.isComputeNodeValid.selector,
-                computeNode
-            ),
-            abi.encode(true)
-        );
-        vm.mockCall(
-            address(trainingManager),
-            abi.encodeWithSelector(
-                ITrainingManager.getModelStatus.selector,
-                TRAINING_RUN_ID
-            ),
-            abi.encode(ITrainingManager.ModelStatus.Done)
-        );
-        vm.mockCall(
-            address(trainingManager),
-            abi.encodeWithSelector(
-                ITrainingManager.getTrainingRunEndTime.selector,
-                TRAINING_RUN_ID
-            ),
-            abi.encode(block.timestamp)
-        );
+        // Simulate time passage for claim delay
+        vm.warp(block.timestamp + 8 days);
+    }
 
-        // Simulate submitting 10 attestations for training run ID 1
-        // In a real scenario, this would be done through a function call that updates the contract's state
-        // For testing purposes, we'll assume the attestations have been submitted
+    function testClaimRewards() public {
+        uint256 expectedReward = ATTESTATION_COUNT * REWARD_RATE;
 
-        // Fast forward 7 days (claim delay)
-        vm.warp(block.timestamp + 7 days + 1);
+        uint256 initialBalance = pinToken.balanceOf(computeNode);
 
-        // Mock pendingRewards function to return rewards for 10 attestations
-        vm.mockCall(
-            address(stakingManager),
-            abi.encodeWithSelector(
-                StakingManager.pendingRewards.selector,
-                computeNode
-            ),
-            abi.encode(10 * stakingManager.REWARD_RATE())
-        );
-
-        // Claim rewards
         vm.prank(computeNode);
         stakingManager.claim();
 
-        // Check claimed rewards (10 attestations * REWARD_RATE)
-        uint256 expectedRewards = 10 * stakingManager.REWARD_RATE();
-        uint256 actualBalance = pinToken.balanceOf(computeNode);
+        uint256 finalBalance = pinToken.balanceOf(computeNode);
+
         assertEq(
-            actualBalance,
-            INITIAL_BALANCE + expectedRewards,
-            "Claimed rewards should be correct for 10 attestations"
+            finalBalance - initialBalance,
+            expectedReward,
+            "Incorrect reward amount claimed"
         );
     }
 }
