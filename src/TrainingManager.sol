@@ -188,7 +188,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     function getAttestations(
         uint256 trainingRunId,
         address account
-    ) external view returns (uint256) {
+    ) external returns (uint256) {
         require(
             trainingRunStatuses[trainingRunId] != ModelStatus.Registered,
             "Training run not started"
@@ -224,13 +224,13 @@ contract TrainingManager is ITrainingManager, AccessControl {
      */
     function getAttestationsForComputeNode(
         address account
-    ) external view returns (bytes[] memory) {
+    ) external returns (bytes[] memory) {
         return computeAttestations[account];
     }
 
     function getTrainingRunEndTime(
         uint256 trainingRunId
-    ) external view override returns (uint256) {
+    ) external override returns (uint256) {
         require(
             trainingRunStatuses[trainingRunId] == ModelStatus.Done,
             "Training run has not ended"

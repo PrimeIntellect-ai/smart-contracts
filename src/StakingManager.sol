@@ -35,7 +35,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     // Reward rate: 1 PIN per attestation
     uint256 public constant REWARD_RATE = 1;
 
-    struct ComputeNodeInfo {
+    struct ComputeBalancesInfo {
         uint256 currentBalance; // PIN tokens not allocated to training run
         uint256 pendingRewards; // rewards owed by the protocol
         mapping(uint256 => uint256) attestationsPerRun; // trainingRunId => attestation count
@@ -48,7 +48,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         bool resolved;
     }
 
-    mapping(address => ComputeNodeInfo) public computeNodeBalances; // Mapping of compute node balances
+    mapping(address => ComputeBalancesInfo) public computeNodeBalances; // Mapping of compute node balances
     mapping(uint256 => uint256) public attestationsPerTrainingRun; // Mapping to track attestations per training run
     mapping(uint256 => Challenge) public challenges;
 
@@ -114,7 +114,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
             _amount >= MIN_DEPOSIT,
             "Deposit amount must be greater than minimum deposit"
         );
-        ComputeNodeInfo storage balances = computeNodeBalances[account];
+        ComputeBalancesInfo storage balances = computeNodeBalances[account];
 
         require(
             PIN.transferFrom(msg.sender, address(this), _amount),
@@ -129,7 +129,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// @notice Withdraw staked PIN from PrimeIntellectManager
     /// @param _amount Amount of PIN tokens to withdraw
     function withdraw(uint256 _amount) external nonReentrant {
-        ComputeNodeInfo storage balances = computeNodeBalances[msg.sender];
+        ComputeBalancesInfo storage balances = computeNodeBalances[msg.sender];
         require(balances.currentBalance >= _amount, "Insufficient balance");
 
         balances.currentBalance = balances.currentBalance - _amount;
@@ -141,7 +141,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Only model owner can submit on-chain challenge.
     /// challenges posted for a specific training hash (compute provider & training run Id)
-    /// todo: can only be called by `model_owner`
+    /// can only be called by `model_owner`
     /// returns challengeId
     function challenge(
         uint256 trainingRunId,
@@ -180,7 +180,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         address account,
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
-        ComputeNodeInfo storage balances = computeNodeBalances[account];
+        ComputeBalancesInfo storage balances = computeNodeBalances[account];
         uint256 totalBalance = balances.currentBalance;
 
         require(
@@ -202,7 +202,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// Pending rewards show up after training run ends
     /// Pending rewards include claimable and not-yet-claimable rewards
     function pendingRewards(address account) external view returns (uint256) {
-        ComputeNodeInfo storage nodeInfo = computeNodeBalances[account];
+        ComputeBalancesInfo storage nodeInfo = computeNodeBalances[account];
         uint256 totalPendingRewards = 0;
 
         for (uint256 i = 0; i < nodeInfo.participatedRuns.length; i++) {
@@ -226,7 +226,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         address account,
         uint256 trainingRunId
     ) internal view returns (bool isClaimable, uint256 rewards) {
-        ComputeNodeInfo storage nodeInfo = computeNodeBalances[account];
+        ComputeBalancesInfo storage nodeInfo = computeNodeBalances[account];
         uint256 attestationCount = nodeInfo.attestationsPerRun[trainingRunId];
         uint256 endTime = trainingManager.getTrainingRunEndTime(trainingRunId);
 
@@ -239,7 +239,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// @notice Claim function for compute nodes to claim their rewards
     /// @dev Rewards are only claimable after the CLAIM_DELAY_DAYS period has passed since the training run ended
     function claim() external nonReentrant whenNotPaused {
-        ComputeNodeInfo storage nodeInfo = computeNodeBalances[msg.sender];
+        ComputeBalancesInfo storage nodeInfo = computeNodeBalances[msg.sender];
         uint256 totalRewards = 0;
 
         for (uint256 i = 0; i < nodeInfo.participatedRuns.length; i++) {
@@ -257,27 +257,20 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
 
         require(totalRewards > 0, "No rewards available to claim");
 
-        uint256[] memory unclaimedRuns = new uint256[](
+        // Remove claimed runs from the participated runs array
+        uint256[] memory newParticipatedRuns = new uint256[](
             nodeInfo.participatedRuns.length
         );
-        uint256 unclaimedCount = 0;
-
+        uint256 newIndex = 0;
         for (uint256 i = 0; i < nodeInfo.participatedRuns.length; i++) {
             uint256 trainingRunId = nodeInfo.participatedRuns[i];
             if (nodeInfo.attestationsPerRun[trainingRunId] > 0) {
-                unclaimedRuns[unclaimedCount] = trainingRunId;
-                unclaimedCount++;
+                newParticipatedRuns[newIndex] = trainingRunId;
+                newIndex++;
             }
         }
-
-        uint256[] storage newParticipatedRuns = nodeInfo.participatedRuns;
-        assembly {
-            sstore(newParticipatedRuns.slot, unclaimedCount)
-        }
-
-        for (uint256 i = 0; i < unclaimedCount; i++) {
-            newParticipatedRuns[i] = unclaimedRuns[i];
-        }
+        nodeInfo.participatedRuns = newParticipatedRuns;
+        nodeInfo.participatedRuns.length = newIndex;
 
         PIN.mint(msg.sender, totalRewards);
 
