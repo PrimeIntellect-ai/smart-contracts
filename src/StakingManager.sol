@@ -223,7 +223,7 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
     function calculateRunRewards(
         address account,
         uint256 trainingRunId
-    ) internal returns (bool isClaimable, uint256 rewards) {
+    ) internal view returns (bool isClaimable, uint256 rewards) {
         ComputeBalancesInfo storage nodeInfo = computeNodeBalances[account];
         uint256 attestationCount = nodeInfo.attestationsPerRun[trainingRunId];
         uint256 endTime = trainingManager.getTrainingRunEndTime(trainingRunId);
