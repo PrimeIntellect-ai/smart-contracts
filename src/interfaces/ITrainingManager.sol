@@ -61,9 +61,9 @@ interface ITrainingManager {
         uint256 trainingRunId
     ) external returns (address[] memory);
 
-    function getAttestationsForComputeNode(
-        address account
-    ) external returns (bytes[] memory);
+    // function getAttestationsForComputeNode(
+    //     address account
+    // ) external returns (bytes[] memory);
 
     function getTrainingRunEndTime(
         uint256 trainingRunId

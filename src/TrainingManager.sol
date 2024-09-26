@@ -15,22 +15,17 @@ contract TrainingManager is ITrainingManager, AccessControl {
     }
 
     struct TrainingRunInfo {
-        mapping(address => ComputeNodeInfo) computeNodes;
-        address[] computeNodesArray;
-        uint256 endTime;
-        ModelStatus status;
+        string name;
         uint256 budget;
+        ModelStatus status;
+        address[] computeNodesArray;
+        mapping(address => ComputeNodeInfo) computeNodes;
+        uint256 endTime;
     }
 
     mapping(uint256 => TrainingRunInfo) internal trainingRunData;
     mapping(address => bool) private registeredValidComputeNodes;
-
-    // mapping(uint256 => ModelStatus) private trainingRunStatuses;
-    mapping(uint256 => string) private trainingRunNames;
-    mapping(uint256 => uint256) private trainingRunBudgets;
     mapping(address => string) private registeredComputeNodes;
-    // mapping(uint256 => address[]) private trainingRunComputeNodes;
-    // mapping(address => bytes[]) private computeAttestations;
 
     uint256 public trainingRunIdCount;
 
@@ -41,14 +36,11 @@ contract TrainingManager is ITrainingManager, AccessControl {
         uint256 trainingRunId
     );
 
-    constructor() {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    }
-
     //////////////////////////////////////
-    ////           MODEL OWNERS        ///
-    //////////////////////////////////////
+    ////           MODEL SETUP        ///
+    /////////////////////////////////////
 
+    // todo: add require statement for duplication name/budget combination
     function registerModel(
         string memory _name,
         uint256 _budget
@@ -82,10 +74,22 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return trainingRunData[trainingRunId].budget;
     }
 
-    //////////////////////////////////////
-    ////      COMPUTE PROVIDERS        ///
-    //////////////////////////////////////
+    /// @notice returns status for the model regarding the training run
+    /// @dev Model statuses are defined in ITrainingManager.sol
+    function getTrainingRunStatus(
+        uint256 trainingRunId
+    ) external view returns (ModelStatus) {
+        return trainingRunData[trainingRunId].status;
+    }
 
+    /////////////////////////////////////
+    ////         TRAINING RUN         ///
+    /////////////////////////////////////
+
+    /// @notice Adds compute node to list of compute providers for training run
+    /// @param account wallet address of compute node
+    /// @param ipAddress ip address that will be associated with compute attestations
+    /// @param trainingRunId the id for the training run
     function joinTrainingRun(
         address account,
         string memory ipAddress,
@@ -113,18 +117,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return true;
     }
 
-    /**
-     * @dev Returns status of training run
-     */
-    function getTrainingRunStatus(
-        uint256 trainingRunId
-    ) external view returns (ModelStatus) {
-        return trainingRunData[trainingRunId].status;
-    }
-
-    /**
-     * @dev Registers compute node for training run
-     */
+    /// @dev Adds compute node to whitelist of valid compute nodes
     function addComputeNode(address account) external {
         require(account != address(0), "Invalid node address");
         require(
@@ -136,16 +129,12 @@ contract TrainingManager is ITrainingManager, AccessControl {
         emit ComputeNodeAdded(account);
     }
 
-    /**
-     * @dev Checks if a compute node has been added
-     */
+    /// @dev Checks if a compute node has been added
     function isComputeNodeValid(address account) external view returns (bool) {
         return registeredValidComputeNodes[account];
     }
 
-    /**
-     * @dev Starts training run
-     */
+    /// @dev Starts training run
     function startTrainingRun(
         uint256 trainingRunId
     ) external override returns (bool) {

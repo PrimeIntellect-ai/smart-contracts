@@ -5,11 +5,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SignedMath.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./PrimeIntellectToken.sol";
 import "./TrainingManager.sol";
+import "../src/interfaces/ITrainingManager.sol";
 
 /// Compute nodes added to whitelist.
 /// Compute nodes deposit/stake to the network. MIN deposit required.
@@ -18,13 +19,13 @@ import "./TrainingManager.sol";
 /// Compute nodes can be slashed for providing fake or faulty attestation.
 /// The Prime Intellect protocol can distribute PIN tokens to be claimed as rewards by compute providers.
 
-contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
+contract StakingManager is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
     using SignedMath for uint256;
 
     // The Prime Intellect Network (PIN) token
     PrimeIntellectToken public PIN;
-    ITrainingManager public trainingManager;
+    TrainingManager public trainingManager;
 
     // 1 year of H100 hrs = 8760 PIN
     uint256 public MIN_DEPOSIT;
@@ -63,23 +64,20 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     event RewardsClaimed(address indexed account, uint256 amount);
 
     constructor(
-        PrimeIntellectToken _pin,
-        ITrainingManager _trainingManager,
-        uint256 _initialMinDeposit
-    ) {
-        PIN = _pin;
-        trainingManager = _trainingManager;
-        MIN_DEPOSIT = _initialMinDeposit;
-        grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        address _pinTokenAddress,
+        address _trainingManagerAddress,
+        address initialOwner
+    ) Ownable(initialOwner) {
+        PIN = PrimeIntellectToken(_pinTokenAddress);
+        trainingManager = TrainingManager(_trainingManagerAddress);
+        MIN_DEPOSIT = 10000 * 10 ** 18; // 10,000 PIN token (assuming 18 decimals)
     }
 
     /////////////////////////////////////////
     ////           ADMIN FUNCTIONS        ///
     /////////////////////////////////////////
 
-    function updateMinDeposit(
-        uint256 _minDeposit
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateMinDeposit(uint256 _minDeposit) public onlyOwner {
         MIN_DEPOSIT = _minDeposit;
     }
 
@@ -91,11 +89,11 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         _;
     }
 
-    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pause() public onlyOwner {
         _pause();
     }
 
-    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unpause() public onlyOwner {
         _unpause();
     }
 
@@ -179,7 +177,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     function slash(
         address account,
         uint256 amount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+    ) external onlyOwner nonReentrant {
         ComputeBalancesInfo storage balances = computeNodeBalances[account];
         uint256 totalBalance = balances.currentBalance;
 
