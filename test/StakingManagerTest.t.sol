@@ -16,7 +16,7 @@ contract StakingManagerTest is Test {
     address public admin = address(1);
     address public computeNode = address(2);
 
-    uint256 public constant INITIAL_SUPPLY = 100000 * 10 ** 18; // 1 million tokens
+    uint256 public constant INITIAL_SUPPLY = 100000 * 10 ** 18; // 100,000 tokens
     uint256 public constant MIN_DEPOSIT = 10000 * 10 ** 18; // 1000 tokens
 
     function setUp() public {
@@ -49,7 +49,7 @@ contract StakingManagerTest is Test {
     }
 
     function test_stake() public {
-        uint256 stakeAmount = 1001;
+        uint256 stakeAmount = MIN_DEPOSIT + 1;
 
         vm.startPrank(computeNode);
 
