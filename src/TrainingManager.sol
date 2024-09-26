@@ -147,9 +147,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return true;
     }
 
-    /**
-     * @dev Ends training run
-     */
+    /// @notice Called by compute nodes to end training run
     function endTrainingRun(uint256 trainingRunId) external returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(

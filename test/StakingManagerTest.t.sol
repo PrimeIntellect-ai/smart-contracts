@@ -107,11 +107,42 @@ contract StakingManagerTest is Test {
         console.log("Final staked balance:", finalStakedBalance);
     }
 
-    function test_withdraw() public {}
+    function test_withdraw() public {
+        uint256 stakeAmount = MIN_DEPOSIT + 1000 * 10 ** 18; // min deposit + 1000 tokens
+
+        vm.startPrank(computeNode);
+
+        PIN.approve(address(stakingManager), stakeAmount);
+        stakingManager.stake(computeNode, stakeAmount);
+
+        uint256 stakedBalanceBeforeWithdraw = stakingManager
+            .getComputeNodeBalance(computeNode);
+
+        uint256 withdrawAmount = MIN_DEPOSIT;
+
+        // withdraw step
+        stakingManager.withdraw(MIN_DEPOSIT);
+
+        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
+            computeNode
+        );
+
+        assertEq(
+            finalStakedBalance,
+            stakedBalanceBeforeWithdraw - withdrawAmount,
+            "PIN balance should decrease by withdraw amount"
+        );
+
+        console.log("Initial PIN balance:", stakedBalanceBeforeWithdraw);
+        console.log("Withdrawn amount:", withdrawAmount);
+        console.log("Final staked balance:", finalStakedBalance);
+
+        vm.stopPrank();
+    }
 
     function testDepositBelowMinimum() public {}
 
-    function testDepositUnregisteredUser() public {}
+    function testUnregisteredUser() public {}
 
-    function testDepositInsufficientBalance() public {}
+    function testInsufficientBalance() public {}
 }

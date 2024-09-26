@@ -37,8 +37,8 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant REWARD_RATE = 1;
 
     struct ComputeBalancesInfo {
-        uint256 currentBalance; // PIN tokens not allocated to training run
-        uint256 pendingRewards; // rewards owed by the protocol
+        uint256 currentBalance;
+        uint256 pendingRewards;
         mapping(uint256 => uint256) attestationsPerRun; // trainingRunId => attestation count
         uint256[] participatedRuns;
     }
@@ -199,7 +199,7 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
     /// @notice View function to see pending rewards on the frontend
     /// Pending rewards show up after training run ends
     /// Pending rewards include claimable and not-yet-claimable rewards
-    function pendingRewards(address account) external returns (uint256) {
+    function pendingRewards(address account) external view returns (uint256) {
         ComputeBalancesInfo storage nodeInfo = computeNodeBalances[account];
         uint256 totalPendingRewards = 0;
 
