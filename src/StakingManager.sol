@@ -259,7 +259,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         while (nodeInfo.participatedRuns.length > newLength) {
             nodeInfo.participatedRuns.pop();
         }
-
+        // staking manager is approved minter on PIN token contract
         PIN.mint(msg.sender, totalRewards);
 
         emit RewardsClaimed(msg.sender, totalRewards);
