@@ -26,7 +26,7 @@ contract PrimeIntellectToken is ERC20, AccessControl {
         grantRole(ADMIN_ROLE, account);
     }
 
-    function revokeAdminRole(
+    function revokeMinterRole(
         address account
     ) public onlyRole(DEFAULT_ADMIN_ROLE) {
         revokeRole(ADMIN_ROLE, account);

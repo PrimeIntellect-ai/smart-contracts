@@ -18,7 +18,7 @@ contract ChallengeSlash is Test {
     uint256 public constant TRAINING_RUN_ID = 1;
     uint256 public constant ATTESTATION_COUNT = 10;
 
-    function setup() public {}
+    function setUp() public {}
 
     function test_challenge() public {}
 }

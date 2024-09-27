@@ -35,6 +35,22 @@ contract TrainingManager is ITrainingManager, AccessControl {
         address indexed computeNode,
         uint256 trainingRunId
     );
+    event StakingManagerSet(address stakingManager);
+
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    function setStakingManager(
+        address _stakingManagerAddress
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(
+            _stakingManagerAddress != address(0),
+            "Invalid StakingManager address"
+        );
+        stakingManager = StakingManager(_stakingManagerAddress);
+        emit StakingManagerSet(_stakingManagerAddress);
+    }
 
     //////////////////////////////////////
     ////           MODEL SETUP        ///
@@ -96,6 +112,10 @@ contract TrainingManager is ITrainingManager, AccessControl {
         uint256 trainingRunId
     ) external returns (bool) {
         require(
+            address(stakingManager) != address(0),
+            "StakingManager not set"
+        );
+        require(
             stakingManager.getComputeNodeBalance(account) >=
                 stakingManager.MIN_DEPOSIT(),
             "Insufficient staked balance"
@@ -135,6 +155,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     }
 
     /// @dev Starts training run
+    /// must be Prime Intellect admin
     function startTrainingRun(
         uint256 trainingRunId
     ) external override returns (bool) {
@@ -148,6 +169,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     }
 
     /// @notice Called by compute nodes to end training run
+    /// Prime Intellect admin
     function endTrainingRun(uint256 trainingRunId) external returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
@@ -182,6 +204,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         );
 
         nodeInfo.attestations.push(attestation);
+        stakingManager.recordAttestation(account, trainingRunId);
 
         emit AttestationSubmitted(account, trainingRunId);
         return true;
@@ -231,6 +254,27 @@ contract TrainingManager is ITrainingManager, AccessControl {
         );
 
         return nodeInfo.attestations;
+    }
+
+    function getTrainingRunInfo(
+        uint256 trainingRunId
+    )
+        external
+        view
+        returns (
+            string memory _name,
+            uint256 _budget,
+            ModelStatus status,
+            address[] memory computeNodes
+        )
+    {
+        TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
+        return (
+            runInfo.name,
+            runInfo.budget,
+            runInfo.status,
+            runInfo.computeNodesArray
+        );
     }
 
     function getTrainingRunEndTime(
