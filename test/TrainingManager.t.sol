@@ -73,6 +73,14 @@ contract TrainingManagerTest is Test {
             "trainingRunIdCount not incremented correctly"
         );
 
+        string memory anotherModel = "Test Model";
+        uint256 anotherBudget = 1000;
+
+        vm.expectRevert(
+            "Training run with same name and budget already exists."
+        );
+        trainingManager.registerModel(anotherModel, anotherBudget);
+
         vm.stopPrank();
     }
 

@@ -61,6 +61,21 @@ contract TrainingManager is ITrainingManager, AccessControl {
         string memory _name,
         uint256 _budget
     ) external override returns (uint256) {
+        // Check for duplicates
+        for (uint256 i = 1; i <= trainingRunIdCount; i++) {
+            TrainingRunInfo storage existingRun = trainingRunData[i];
+            if (
+                keccak256(abi.encodePacked(existingRun.name)) ==
+                keccak256(abi.encodePacked(_name)) &&
+                existingRun.budget == _budget
+            ) {
+                revert(
+                    "Training run with same name and budget already exists."
+                );
+            }
+        }
+
+        // Increment training run id count and register new model
         trainingRunIdCount++;
         TrainingRunInfo storage newRun = trainingRunData[trainingRunIdCount];
         newRun.status = ModelStatus.Registered;
@@ -169,7 +184,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
     }
 
     /// @notice Called by compute nodes to end training run
-    /// Prime Intellect admin
     function endTrainingRun(uint256 trainingRunId) external returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
@@ -182,10 +196,8 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return true;
     }
 
-    /**
-     * @dev Submit attestation
-     */
-
+    /// @notice Submits attestion that compute was utilized for training by node
+    /// @dev Function called by compute node
     function submitAttestation(
         address account,
         uint256 trainingRunId,
