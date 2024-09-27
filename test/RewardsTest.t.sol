@@ -16,8 +16,8 @@ contract StakingManagerTest is Test {
     address public computeNode = address(2);
 
     uint256 public constant INITIAL_SUPPLY = 1000000 * 1e18;
-    uint256 public constant MIN_DEPOSIT = 10000;
-    uint256 public constant REWARD_RATE = 1 * 1e18;
+    uint256 public constant MIN_DEPOSIT = 10000 * 1e18;
+    uint256 public constant REWARD_RATE = 1;
 
     function setUp() public {
         vm.startPrank(admin);
@@ -29,6 +29,7 @@ contract StakingManagerTest is Test {
             address(trainingManager)
         );
 
+        PIN.grantAdminRole(address(stakingManager));
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
 

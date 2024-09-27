@@ -37,6 +37,10 @@ contract TrainingManager is ITrainingManager, AccessControl {
     );
     event StakingManagerSet(address stakingManager);
 
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
     function setStakingManager(
         address _stakingManagerAddress
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
