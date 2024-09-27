@@ -224,19 +224,24 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// @notice Claim function for compute nodes to claim their rewards
     /// @dev Rewards are only claimable after the CLAIM_DELAY_DAYS period has passed since the training run ended
     function claim() external nonReentrant whenNotPaused {
+        // For the caller get array of participated runs and attestations per run.
         ComputeBalancesInfo storage nodeInfo = computeNodeBalances[msg.sender];
+        // set counter
         uint256 totalRewards = 0;
         uint256 newLength = 0;
 
+        // for each participated run, get training run id
         for (uint256 i = 0; i < nodeInfo.participatedRuns.length; i++) {
             uint256 trainingRunId = nodeInfo.participatedRuns[i];
+            // use calculateRunRewards above to return rewards for that run
             (bool isClaimable, uint256 runRewards) = calculateRunRewards(
                 msg.sender,
                 trainingRunId
             );
-
+            // if run rewards are claimable (over 7 days delay) then add run rewards to total rewards
             if (isClaimable) {
                 totalRewards += runRewards;
+                // delete keyword used to removed claimed attestations from the attestationsPerRun mapping
                 delete nodeInfo.attestationsPerRun[trainingRunId];
             } else {
                 // Keep unclaimed runs
