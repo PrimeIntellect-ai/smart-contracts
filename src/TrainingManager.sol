@@ -23,9 +23,9 @@ contract TrainingManager is ITrainingManager, AccessControl {
         uint256 endTime;
     }
 
-    mapping(uint256 => TrainingRunInfo) internal trainingRunData;
-    mapping(address => bool) private registeredValidComputeNodes;
-    mapping(address => string) private registeredComputeNodes;
+    mapping(uint256 => TrainingRunInfo) public trainingRunData;
+    mapping(address => bool) public registeredValidComputeNodes;
+    mapping(address => string) public registeredComputeNodes;
 
     uint256 public trainingRunIdCount;
 
