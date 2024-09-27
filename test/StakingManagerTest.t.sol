@@ -31,7 +31,7 @@ contract StakingManagerTest is Test {
         console.log("StakingManager deployed at:", address(stakingManager));
 
         PIN.grantAdminRole(address(stakingManager));
-        console.log("ADMIN_ROLE for minting granted to staking manager");
+        console.log("MINTER_ROLE for minting granted to staking manager");
 
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
