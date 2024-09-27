@@ -1,6 +1,6 @@
-## Foundry
+## Prime Intellect Incentives Network
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+**Prime Intellect is building a global compute exchange.**
 
 Foundry consists of:
 
