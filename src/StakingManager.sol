@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SignedMath.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./PrimeIntellectToken.sol";
@@ -19,7 +19,7 @@ import "../src/interfaces/ITrainingManager.sol";
 /// Compute nodes can be slashed for providing fake or faulty attestation.
 /// The Prime Intellect protocol can distribute PIN tokens to be claimed as rewards by compute providers.
 
-contract StakingManager is Ownable, ReentrancyGuard, Pausable {
+contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
     using SignedMath for uint256;
 
@@ -61,14 +61,11 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
     );
     event Slashed(address indexed account, uint256 amount);
     event RewardsClaimed(address indexed account, uint256 amount);
+    event TrainingManagerUpdated(address newTrainingManager);
+    event AttestationRecorded(address indexed account, uint256 trainingRunId);
 
-    constructor(
-        address _pinTokenAddress,
-        address _trainingManagerAddress,
-        address initialOwner
-    ) Ownable(initialOwner) {
+    constructor(address _pinTokenAddress) {
         PIN = PrimeIntellectToken(_pinTokenAddress);
-        trainingManager = TrainingManager(_trainingManagerAddress);
         MIN_DEPOSIT = 10000 * 10 ** 18; // 10,000 PIN token (assuming 18 decimals)
     }
 
@@ -76,23 +73,28 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
     ////           ADMIN FUNCTIONS        ///
     /////////////////////////////////////////
 
-    function updateMinDeposit(uint256 _minDeposit) public onlyOwner {
+    function setTrainingManager(
+        address _trainingManagerAddress
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(
+            _trainingManagerAddress != address(0),
+            "Invalid TrainingManager address"
+        );
+        trainingManager = TrainingManager(_trainingManagerAddress);
+        emit TrainingManagerUpdated(_trainingManagerAddress);
+    }
+
+    function updateMinDeposit(
+        uint256 _minDeposit
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
         MIN_DEPOSIT = _minDeposit;
     }
 
-    modifier onlyRegisteredComputeNode(address account) {
-        require(
-            trainingManager.isComputeNodeValid(account),
-            "Account not on Compute Node whitelist"
-        );
-        _;
-    }
-
-    function pause() public onlyOwner {
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
     }
 
@@ -103,13 +105,18 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
     /// @notice when a user deposits, we will check that user against whitelist.
     /// Only whitelisted Compute Nodes can stake.
     /// Balance associated to compute node address
-    function stake(
-        address account,
-        uint256 _amount
-    ) external nonReentrant onlyRegisteredComputeNode(account) {
+    function stake(address account, uint256 _amount) external nonReentrant {
+        require(
+            address(trainingManager) != address(0),
+            "TrainingManager not set"
+        );
+        require(
+            trainingManager.isComputeNodeValid(account),
+            "Account not on Compute Node whitelist"
+        );
         require(
             _amount >= MIN_DEPOSIT,
-            "Stake amount must be greater than minimum deposit"
+            "Deposit amount must be greater than minimum deposit"
         );
         ComputeBalancesInfo storage balances = computeNodeBalances[account];
 
@@ -172,11 +179,11 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
 
     /// @notice slash is called by Prime Intellect admin.
     /// Slash amount is discretionary.
-    /// sends staked PIN to 0x address (burn)
+    /// sends staked PIN to 0x address (burn).
     function slash(
         address account,
         uint256 amount
-    ) external onlyOwner nonReentrant {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
         ComputeBalancesInfo storage balances = computeNodeBalances[account];
         uint256 totalBalance = balances.currentBalance;
 
@@ -270,6 +277,25 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
         PIN.mint(msg.sender, totalRewards);
 
         emit RewardsClaimed(msg.sender, totalRewards);
+    }
+
+    function recordAttestation(
+        address account,
+        uint256 trainingRunId
+    ) external {
+        require(
+            msg.sender == address(trainingManager),
+            "Only TrainingManager can record attestations"
+        );
+        ComputeBalancesInfo storage nodeInfo = computeNodeBalances[account];
+        nodeInfo.attestationsPerRun[trainingRunId]++;
+
+        // If this is the first attestation for this run, add it to participatedRuns
+        if (nodeInfo.attestationsPerRun[trainingRunId] == 1) {
+            nodeInfo.participatedRuns.push(trainingRunId);
+        }
+
+        emit AttestationRecorded(account, trainingRunId);
     }
 
     /////////////////////////////////////////

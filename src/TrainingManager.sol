@@ -35,6 +35,20 @@ contract TrainingManager is ITrainingManager, AccessControl {
         address indexed computeNode,
         uint256 trainingRunId
     );
+    event StakingManagerSet(address stakingManager);
+
+    constructor() {}
+
+    function setStakingManager(
+        address _stakingManagerAddress
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(
+            _stakingManagerAddress != address(0),
+            "Invalid StakingManager address"
+        );
+        stakingManager = StakingManager(_stakingManagerAddress);
+        emit StakingManagerSet(_stakingManagerAddress);
+    }
 
     //////////////////////////////////////
     ////           MODEL SETUP        ///
@@ -95,6 +109,10 @@ contract TrainingManager is ITrainingManager, AccessControl {
         string memory ipAddress,
         uint256 trainingRunId
     ) external returns (bool) {
+        require(
+            address(stakingManager) != address(0),
+            "StakingManager not set"
+        );
         require(
             stakingManager.getComputeNodeBalance(account) >=
                 stakingManager.MIN_DEPOSIT(),
@@ -184,6 +202,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         );
 
         nodeInfo.attestations.push(attestation);
+        stakingManager.recordAttestation(account, trainingRunId);
 
         emit AttestationSubmitted(account, trainingRunId);
         return true;

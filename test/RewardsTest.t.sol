@@ -24,12 +24,15 @@ contract StakingManagerTest is Test {
 
         PIN = new PrimeIntellectToken("Prime-Intellect-Token", "PIN");
         trainingManager = new TrainingManager();
-        stakingManager = new StakingManager(
-            address(PIN),
-            address(trainingManager),
-            admin
-        );
+        stakingManager = new StakingManager(address(PIN));
 
+        // Set the TrainingManager address in StakingManager
+        stakingManager.setTrainingManager(address(trainingManager));
+
+        // Set the StakingManager address in TrainingManager
+        trainingManager.setStakingManager(address(stakingManager));
+
+        PIN.approve(computeNode, INITIAL_SUPPLY);
         PIN.mint(computeNode, INITIAL_SUPPLY);
         trainingManager.addComputeNode(computeNode);
         vm.stopPrank();
@@ -53,13 +56,15 @@ contract StakingManagerTest is Test {
                 1000 * 1e18
             );
 
-            trainingManager.startTrainingRun(trainingRunId);
-
+            // Join the training run before starting it
             trainingManager.joinTrainingRun(
                 computeNode,
                 "192.168.1.1",
                 trainingRunId
             );
+
+            // Start the training run
+            trainingManager.startTrainingRun(trainingRunId);
 
             /// @notice allows us to set multiple training runs j
             /// each with number of attestations i in succeeding functions

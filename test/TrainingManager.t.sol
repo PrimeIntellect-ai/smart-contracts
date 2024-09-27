@@ -22,12 +22,14 @@ contract TrainingManagerTest is Test {
         vm.startPrank(admin);
 
         PIN = new PrimeIntellectToken("Prime Intellect Token", "PIN");
-        stakingManager = new StakingManager(
-            address(PIN),
-            address(trainingManager),
-            admin
-        );
+        stakingManager = new StakingManager(address(PIN));
         trainingManager = new TrainingManager();
+
+        // Set the TrainingManager address in StakingManager
+        stakingManager.setTrainingManager(address(trainingManager));
+
+        // Set the StakingManager address in TrainingManager
+        trainingManager.setStakingManager(address(stakingManager));
 
         PIN.mint(computeNode, INITIAL_SUPPLY);
 
@@ -77,11 +79,14 @@ contract TrainingManagerTest is Test {
     function test_registerComputeNode() public {
         vm.startPrank(admin);
 
+        vm.expectRevert("Compute node already registered");
+        trainingManager.addComputeNode(computeNode);
+
         trainingManager.addComputeNode(computeNode2);
 
         bool isValid = trainingManager.isComputeNodeValid(computeNode2);
 
-        console.log("Compute node address:", computeNode);
+        console.log("Compute node address:", computeNode2);
         console.log("Is compute node valid:", isValid);
 
         assertTrue(isValid, "Compute node should be valid after registration");
@@ -123,7 +128,17 @@ contract TrainingManagerTest is Test {
         vm.stopPrank();
 
         vm.startPrank(computeNode);
+        console.log(
+            "Compute node balance before stake is:",
+            PIN.balanceOf(computeNode)
+        );
+
+        PIN.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(computeNode, stakeAmount);
+        console.log(
+            "Compute node balance after stake is:",
+            PIN.balanceOf(computeNode)
+        );
 
         bool success = trainingManager.joinTrainingRun(
             computeNode,
