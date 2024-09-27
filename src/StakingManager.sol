@@ -283,9 +283,9 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         emit AttestationRecorded(account, trainingRunId);
     }
 
-    /////////////////////////////////////////
-    ////          GETTER FUNCTIONS        ///
-    /////////////////////////////////////////
+    ///////////////////////////////////////
+    ////        GETTER FUNCTIONS        ///
+    ///////////////////////////////////////
 
     /// @notice Get the balance of PIN tokens held by the staking contract
     /// @return The balance of PIN tokens held by this contract
