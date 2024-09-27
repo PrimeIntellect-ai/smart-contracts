@@ -21,16 +21,16 @@ interface ITrainingManager {
 
     function budget(uint256 trainingRunId) external view returns (uint256);
 
+    /// @notice Gets status of training run for id
+    function getTrainingRunStatus(
+        uint256 trainingRunId
+    ) external returns (ModelStatus);
+
     function joinTrainingRun(
         address account,
         string memory ipAddress,
         uint256 trainingRunId
     ) external returns (bool);
-
-    /// @notice Gets status of training run for id
-    function getTrainingRunStatus(
-        uint256 trainingRunId
-    ) external returns (ModelStatus);
 
     /// @notice Registers compute node for training run
     /// @dev Function not called by compute node, so registration needs knowledge of compute nodes
@@ -61,9 +61,10 @@ interface ITrainingManager {
         uint256 trainingRunId
     ) external returns (address[] memory);
 
-    // function getAttestationsForComputeNode(
-    //     address account
-    // ) external returns (bytes[] memory);
+    function getAttestationsForComputeNode(
+        uint256 trainingId,
+        address account
+    ) external returns (bytes[] memory);
 
     function getTrainingRunEndTime(
         uint256 trainingRunId
