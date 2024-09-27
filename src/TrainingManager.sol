@@ -173,7 +173,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /// must be Prime Intellect admin
     function startTrainingRun(
         uint256 trainingRunId
-    ) external override returns (bool) {
+    ) external override onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
             runInfo.status == ModelStatus.Registered,
@@ -242,18 +242,14 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return nodeInfo.attestations.length;
     }
 
-    /**
-     * @dev Returns addresses of compute nodes registered for a training run
-     */
+    /// @dev Returns addresses of compute nodes registered for a training run
     function getComputeNodesForTrainingRun(
         uint256 trainingRunId
     ) external view returns (address[] memory) {
         return trainingRunData[trainingRunId].computeNodesArray;
     }
 
-    /**
-     * @dev Returns attestations of a compute node
-     */
+    /// @dev Returns attestations of a compute node
     function getAttestationsForComputeNode(
         uint256 trainingRunId,
         address account
