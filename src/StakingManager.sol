@@ -135,9 +135,8 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         emit Withdrawn(msg.sender, _amount);
     }
 
-    /// @notice Only model owner can submit on-chain challenge.
+    /// @notice
     /// challenges posted for a specific training hash (compute provider & training run Id)
-    /// can only be called by `model_owner`
     /// returns challengeId
     function challenge(
         uint256 trainingRunId,
