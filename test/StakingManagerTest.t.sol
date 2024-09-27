@@ -138,10 +138,4 @@ contract StakingManagerTest is Test {
 
         vm.stopPrank();
     }
-
-    function testDepositBelowMinimum() public {}
-
-    function testUnregisteredUser() public {}
-
-    function testInsufficientBalance() public {}
 }

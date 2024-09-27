@@ -184,7 +184,6 @@ contract TrainingManagerTest is Test {
     /// test to start a training run and submit attestations
     function testStartAndSubmit() public {
         string memory ipAddress1 = "192.168.1.1";
-
         uint256 stakeAmount = MIN_DEPOSIT;
 
         vm.startPrank(admin);

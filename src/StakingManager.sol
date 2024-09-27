@@ -11,13 +11,6 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./PrimeIntellectToken.sol";
 import "./TrainingManager.sol";
 
-/// Compute nodes added to whitelist.
-/// Compute nodes deposit/stake to the network. MIN deposit required.
-/// Compute nodes will be required to maintain a minimum amount of Prime Intellect tokens staked to the network.
-/// Compute nodes will be able to allocate their stake to training models.
-/// Compute nodes can be slashed for providing fake or faulty attestation.
-/// The Prime Intellect protocol can distribute PIN tokens to be claimed as rewards by compute providers.
-
 contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
     using SignedMath for uint256;
@@ -135,8 +128,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         emit Withdrawn(msg.sender, _amount);
     }
 
-    /// @notice
-    /// challenges posted for a specific training hash (compute provider & training run Id)
+    /// @notice challenges posted for a specific training hash (compute provider & training run Id)
     /// returns challengeId
     function challenge(
         uint256 trainingRunId,
@@ -270,6 +262,8 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         emit RewardsClaimed(msg.sender, totalRewards);
     }
 
+    /// @notice Can only be called by the StakingManager contract
+    /// @dev Used to increment attestations balance for rewards accounting.
     function recordAttestation(
         address account,
         uint256 trainingRunId

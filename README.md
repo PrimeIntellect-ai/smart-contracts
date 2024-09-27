@@ -11,7 +11,11 @@ Foundry consists of:
 
 ## Documentation
 
-https://book.getfoundry.sh/
+Compute nodes added to whitelist.
+Compute nodes deposit/stake to the network. MIN deposit required.
+Compute nodes will be required to maintain a minimum amount of Prime Intellect tokens staked to the network.
+Compute nodes can be slashed for providing fake or faulty attestation.
+The Prime Intellect protocol can distribute PIN tokens to be claimed as rewards by compute providers.
 
 ## Usage
 
