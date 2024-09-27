@@ -24,10 +24,10 @@ contract StakingManagerTest is Test {
 
         PIN = new PrimeIntellectToken("Prime-Intellect-Token", "PIN");
         trainingManager = new TrainingManager();
-        stakingManager = new StakingManager(address(PIN));
-
-        // Set the TrainingManager address in StakingManager
-        stakingManager.setTrainingManager(address(trainingManager));
+        stakingManager = new StakingManager(
+            address(PIN),
+            address(trainingManager)
+        );
 
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));

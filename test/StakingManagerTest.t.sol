@@ -23,24 +23,19 @@ contract StakingManagerTest is Test {
         vm.startPrank(admin);
 
         PIN = new PrimeIntellectToken("Prime-Intellect-Token", "PIN");
-        console.log("PrimeIntellectToken deployed at:", address(PIN));
-
         trainingManager = new TrainingManager();
-        console.log("TrainingManager deployed at:", address(trainingManager));
-
-        stakingManager = new StakingManager(address(PIN));
+        stakingManager = new StakingManager(
+            address(PIN),
+            address(trainingManager)
+        );
         console.log("StakingManager deployed at:", address(stakingManager));
 
-        // Set the TrainingManager address in StakingManager
-        stakingManager.setTrainingManager(address(trainingManager));
-        console.log("TrainingManager set in StakingManager");
+        PIN.grantAdminRole(address(stakingManager));
+        console.log("ADMIN_ROLE for minting granted to staking manager");
 
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
         console.log("StakingManager set in TrainingManager");
-
-        PIN.grantRole(PIN.ADMIN_ROLE(), address(stakingManager));
-        console.log("Minter role granted to admin");
 
         PIN.mint(computeNode, INITIAL_SUPPLY);
         console.log("Initial supply minted to compute node");

@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./PrimeIntellectToken.sol";
 import "./TrainingManager.sol";
-import "../src/interfaces/ITrainingManager.sol";
 
 /// Compute nodes added to whitelist.
 /// Compute nodes deposit/stake to the network. MIN deposit required.
@@ -61,28 +60,21 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     );
     event Slashed(address indexed account, uint256 amount);
     event RewardsClaimed(address indexed account, uint256 amount);
-    event TrainingManagerUpdated(address newTrainingManager);
     event AttestationRecorded(address indexed account, uint256 trainingRunId);
 
-    constructor(address _pinTokenAddress) {
+    constructor(address _pinTokenAddress, address _trainingManagerAddress) {
         PIN = PrimeIntellectToken(_pinTokenAddress);
+        require(
+            _trainingManagerAddress != address(0),
+            "Invalid TrainingManager address"
+        );
+        trainingManager = TrainingManager(_trainingManagerAddress);
         MIN_DEPOSIT = 10000 * 10 ** 18; // 10,000 PIN token (assuming 18 decimals)
     }
 
     /////////////////////////////////////////
     ////           ADMIN FUNCTIONS        ///
     /////////////////////////////////////////
-
-    function setTrainingManager(
-        address _trainingManagerAddress
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(
-            _trainingManagerAddress != address(0),
-            "Invalid TrainingManager address"
-        );
-        trainingManager = TrainingManager(_trainingManagerAddress);
-        emit TrainingManagerUpdated(_trainingManagerAddress);
-    }
 
     function updateMinDeposit(
         uint256 _minDeposit
