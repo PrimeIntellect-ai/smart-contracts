@@ -38,7 +38,6 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
 
     struct ComputeBalancesInfo {
         uint256 currentBalance;
-        uint256 pendingRewards;
         mapping(uint256 => uint256) attestationsPerRun; // trainingRunId => attestation count
         uint256[] participatedRuns;
     }
@@ -53,7 +52,7 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
     mapping(uint256 => uint256) public attestationsPerTrainingRun; // Mapping to track attestations per training run
     mapping(uint256 => Challenge) public challenges;
 
-    event Deposit(address indexed account, uint256 amount);
+    event Staked(address indexed account, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
     event ChallengeSubmitted(
         uint256 indexed challengeId,
@@ -110,7 +109,7 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
     ) external nonReentrant onlyRegisteredComputeNode(account) {
         require(
             _amount >= MIN_DEPOSIT,
-            "Deposit amount must be greater than minimum deposit"
+            "Stake amount must be greater than minimum deposit"
         );
         ComputeBalancesInfo storage balances = computeNodeBalances[account];
 
@@ -121,7 +120,7 @@ contract StakingManager is Ownable, ReentrancyGuard, Pausable {
 
         balances.currentBalance = balances.currentBalance + _amount;
 
-        emit Deposit(account, _amount);
+        emit Staked(account, _amount);
     }
 
     /// @notice Withdraw staked PIN from PrimeIntellectManager

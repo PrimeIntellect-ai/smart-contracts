@@ -135,6 +135,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     }
 
     /// @dev Starts training run
+    /// must be Prime Intellect admin
     function startTrainingRun(
         uint256 trainingRunId
     ) external override returns (bool) {
@@ -148,6 +149,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     }
 
     /// @notice Called by compute nodes to end training run
+    /// Prime Intellect admin
     function endTrainingRun(uint256 trainingRunId) external returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
@@ -231,6 +233,27 @@ contract TrainingManager is ITrainingManager, AccessControl {
         );
 
         return nodeInfo.attestations;
+    }
+
+    function getTrainingRunInfo(
+        uint256 trainingRunId
+    )
+        external
+        view
+        returns (
+            string memory _name,
+            uint256 _budget,
+            ModelStatus status,
+            address[] memory computeNodes
+        )
+    {
+        TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
+        return (
+            runInfo.name,
+            runInfo.budget,
+            runInfo.status,
+            runInfo.computeNodesArray
+        );
     }
 
     function getTrainingRunEndTime(
