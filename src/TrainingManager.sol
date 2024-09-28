@@ -23,9 +23,9 @@ contract TrainingManager is ITrainingManager, AccessControl {
         uint256 endTime;
     }
 
-    mapping(uint256 => TrainingRunInfo) internal trainingRunData;
-    mapping(address => bool) private registeredValidComputeNodes;
-    mapping(address => string) private registeredComputeNodes;
+    mapping(uint256 => TrainingRunInfo) public trainingRunData;
+    mapping(address => bool) public registeredValidComputeNodes;
+    mapping(address => string) public registeredComputeNodes;
 
     uint256 public trainingRunIdCount;
 
@@ -141,6 +141,20 @@ contract TrainingManager is ITrainingManager, AccessControl {
         require(
             runInfo.status == ModelStatus.Registered,
             "Invalid training run status"
+        );
+
+        for (uint256 i = 0; i < runInfo.computeNodesArray.length; i++) {
+            require(
+                runInfo.computeNodesArray[i] != account,
+                "Compute node already joined training run"
+            )
+        }
+        require(
+            // checks the node's index is 0, default value
+            runInfo.computeNodes[account].index == 0 &&
+                (runInfo.computeNodesArray.length == 0 ||
+                    runInfo.computeNodesArray[0] != account),
+            "Compute node already in training run"
         );
 
         runInfo.computeNodesArray.push(account);
