@@ -17,7 +17,7 @@ contract StakingManagerTest is Test {
     address public computeNode = address(2);
 
     uint256 public constant INITIAL_SUPPLY = 100000 * 10 ** 18; // 100,000 tokens
-    uint256 public constant MIN_DEPOSIT = 10000 * 10 ** 18; // 1000 tokens
+    uint256 public constant MIN_DEPOSIT = 10000 * 10 ** 18; // 1,000 tokens
 
     function setUp() public {
         vm.startPrank(admin);
@@ -28,23 +28,23 @@ contract StakingManagerTest is Test {
             address(PIN),
             address(trainingManager)
         );
-        console.log("StakingManager deployed at:", address(stakingManager));
+        
 
         PIN.grantAdminRole(address(stakingManager));
-        console.log("ADMIN_ROLE for minting granted to staking manager");
+        
 
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
-        console.log("StakingManager set in TrainingManager");
+        
 
         PIN.mint(computeNode, INITIAL_SUPPLY);
-        console.log("Initial supply minted to compute node");
+        
 
         trainingManager.addComputeNode(computeNode);
-        console.log("Compute node registered in TrainingManager");
+        
 
         vm.stopPrank();
-        console.log("setUp completed successfully");
+        
     }
 
     function test_stake() public {
@@ -99,11 +99,11 @@ contract StakingManagerTest is Test {
         stakingManager.stake(computeNode, lowStakeAmount);
         vm.stopPrank();
 
-        console.log("Staking test passed successfully");
-        console.log("Initial PIN balance:", initialPINBalance);
-        console.log("Staked amount:", stakeAmount);
-        console.log("Final PIN balance:", finalPINBalance);
-        console.log("Final staked balance:", finalStakedBalance);
+        
+        
+        
+        
+        
     }
 
     function test_withdraw() public {
@@ -132,16 +132,10 @@ contract StakingManagerTest is Test {
             "PIN balance should decrease by withdraw amount"
         );
 
-        console.log("Initial PIN balance:", stakedBalanceBeforeWithdraw);
-        console.log("Withdrawn amount:", withdrawAmount);
-        console.log("Final staked balance:", finalStakedBalance);
+        
+        
+        
 
         vm.stopPrank();
     }
-
-    function testDepositBelowMinimum() public {}
-
-    function testUnregisteredUser() public {}
-
-    function testInsufficientBalance() public {}
 }

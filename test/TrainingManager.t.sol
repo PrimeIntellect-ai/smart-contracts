@@ -49,7 +49,7 @@ contract TrainingManagerTest is Test {
             modelBudget
         );
 
-        console.log("New model registered with trainingRunId:", trainingRunId);
+        
 
         assertEq(
             trainingManager.name(trainingRunId),
@@ -94,8 +94,8 @@ contract TrainingManagerTest is Test {
 
         bool isValid = trainingManager.isComputeNodeValid(computeNode2);
 
-        console.log("Compute node address:", computeNode2);
-        console.log("Is compute node valid:", isValid);
+        
+        
 
         assertTrue(isValid, "Compute node should be valid after registration");
 
@@ -109,8 +109,8 @@ contract TrainingManagerTest is Test {
             (anotherComputeNode)
         );
 
-        console.log("Another compute node address:", anotherComputeNode);
-        console.log("Is another compute node valid:", isAnotherValid);
+        
+        
 
         assertTrue(
             isAnotherValid,
@@ -136,17 +136,11 @@ contract TrainingManagerTest is Test {
         vm.stopPrank();
 
         vm.startPrank(computeNode);
-        console.log(
-            "Compute node balance before stake is:",
-            PIN.balanceOf(computeNode)
-        );
+        
 
         PIN.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(computeNode, stakeAmount);
-        console.log(
-            "Compute node balance after stake is:",
-            PIN.balanceOf(computeNode)
-        );
+        
 
         bool success = trainingManager.joinTrainingRun(
             computeNode,
@@ -163,14 +157,10 @@ contract TrainingManagerTest is Test {
             address[] memory computeNodes
         ) = trainingManager.getTrainingRunInfo(trainingRunId);
 
-        console.log("Training Run Info:");
-        console.log("Name:", name);
-        console.log("Budget:", budget);
-        console.log("Status:", uint(status));
-        console.log("Compute Nodes:");
-        for (uint i = 0; i < computeNodes.length; i++) {
-            console.log(computeNodes[i]);
-        }
+        uint256(status);
+
+        assertEq(name, modelName, "Name should match constructor");
+        assertEq(budget, modelBudget, "Budget should match constructor");
         assertEq(computeNodes.length, 1, "Should have one compute node");
         assertEq(
             computeNodes[0],
@@ -181,11 +171,3 @@ contract TrainingManagerTest is Test {
         vm.stopPrank();
     }
 }
-
-// function test_submitAttestation() public {
-
-// }
-
-// function test_endTrainingRun() public {
-
-// }

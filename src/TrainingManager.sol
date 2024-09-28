@@ -84,6 +84,11 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return trainingRunIdCount;
     }
 
+    /// @notice returns the name of the training run
+    function getLatestModelId() public view returns (uint256) {
+        return trainingRunIdCount;
+    }
+
     /// @notice returns status of training run
     function getModelStatus(
         uint256 trainingRunId

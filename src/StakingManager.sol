@@ -300,7 +300,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         return PIN.balanceOf(address(this));
     }
 
-    /// @notice Get the balance of PIN tokens held by compute node account
+    /// @notice Get the balance of PIN tokens staked by compute node account
     function getComputeNodeBalance(
         address account
     ) external view returns (uint256) {
