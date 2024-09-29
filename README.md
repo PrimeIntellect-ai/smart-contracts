@@ -1,17 +1,25 @@
-## Foundry
+## Prime Intellect Incentives Network
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+**Prime Intellect is a global compute network that uses smart contracts facilitate trading and rewards between Compute Providers, Model Trainers, and Token Holders.**
 
-Foundry consists of:
+This is a Proof-of-Concept (PoC) protocol to demonstrate the power and potential of adding incentives to a global compute network.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+The goals of the PoC are as follows:
+
+-   **Register models and compute nodes onchain**: tba.
+-   **Run training models and submit attestations**: tba.
+-   **Issue rewards in native token for submissions**: tba.
 
 ## Documentation
 
-https://book.getfoundry.sh/
+-   **Prime Intellect Network Token (PIN)**: The native token of the Prime Intellect ecosystem.
+-   **TrainingManager**: Swiss army knife for interacting with EVM smart contracts, sending 
+
+Compute nodes added to whitelist.
+Compute nodes deposit/stake to the network. MIN deposit required.
+Compute nodes will be required to maintain a minimum amount of Prime Intellect tokens staked to the network.
+Compute nodes can be slashed for providing fake or faulty attestation.
+The Prime Intellect protocol can distribute PIN tokens to be claimed as rewards by compute providers.
 
 ## Usage
 

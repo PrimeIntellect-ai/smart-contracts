@@ -120,7 +120,7 @@ contract TrainingManagerTest is Test {
         vm.stopPrank();
     }
 
-    function test_joinTrainingRun() public {
+    function testJoinTrainingRun() public {
         string memory ipAddress = "192.168.1.1";
         uint256 stakeAmount = MIN_DEPOSIT + MIN_DEPOSIT;
 
@@ -168,6 +168,64 @@ contract TrainingManagerTest is Test {
             "Compute node should be added to the training run"
         );
 
+        vm.stopPrank();
+    }
+
+    /// test to start a training run and submit attestations
+    function testStartAndSubmit() public {
+        string memory ipAddress1 = "192.168.1.1";
+        uint256 stakeAmount = MIN_DEPOSIT;
+
+        vm.startPrank(admin);
+
+        string memory modelName = "Test Model";
+        uint256 modelBudget = 1000;
+
+        uint256 trainingRunId = trainingManager.registerModel(
+            modelName,
+            modelBudget
+        );
+
+        TrainingManager.ModelStatus status0 = trainingManager
+            .getTrainingRunStatus(trainingRunId);
+        console.log("Training Run Status before start:", uint256(status0)); // log status as uint
+
+        vm.stopPrank();
+
+        vm.startPrank(computeNode);
+        // join run
+        PIN.approve(address(stakingManager), stakeAmount);
+        stakingManager.stake(computeNode, stakeAmount);
+        trainingManager.joinTrainingRun(computeNode, ipAddress1, trainingRunId);
+        vm.stopPrank();
+
+        // start run
+        vm.startPrank(admin);
+        trainingManager.startTrainingRun(trainingRunId);
+        console.log("TrainingRunId is:", trainingRunId);
+
+        // Display status after starting training run
+        TrainingManager.ModelStatus status1 = trainingManager
+            .getTrainingRunStatus(trainingRunId);
+        console.log("Training Run Status after start:", uint256(status1)); // log status as uint 1
+        vm.stopPrank();
+
+        // submit attestations
+        vm.startPrank(computeNode);
+        bytes memory attestation = abi.encode("Sample attestation data");
+
+        trainingManager.submitAttestation(
+            computeNode,
+            trainingRunId,
+            attestation
+        );
+        uint256 attestationCount = trainingManager.getAttestations(
+            trainingRunId,
+            computeNode
+        );
+        console.log("Number of attestations submitted:", attestationCount);
+
+        assertEq(attestationCount, 1);
         vm.stopPrank();
     }
 }

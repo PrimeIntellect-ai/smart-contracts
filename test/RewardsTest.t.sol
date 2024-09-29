@@ -33,7 +33,7 @@ contract StakingManagerTest is Test {
             address(trainingManager)
         );
 
-        PIN.grantAdminRole(address(stakingManager));
+        PIN.grantRole(PIN.MINTER_ROLE(), address(stakingManager));
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
 

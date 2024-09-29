@@ -23,9 +23,9 @@ contract TrainingManager is ITrainingManager, AccessControl {
         uint256 endTime;
     }
 
-    mapping(uint256 => TrainingRunInfo) internal trainingRunData;
-    mapping(address => bool) private registeredValidComputeNodes;
-    mapping(address => string) private registeredComputeNodes;
+    mapping(uint256 => TrainingRunInfo) public trainingRunData;
+    mapping(address => bool) public registeredValidComputeNodes;
+    mapping(address => string) public registeredComputeNodes;
 
     uint256 public trainingRunIdCount;
 
@@ -148,6 +148,20 @@ contract TrainingManager is ITrainingManager, AccessControl {
             "Invalid training run status"
         );
 
+        for (uint256 i = 0; i < runInfo.computeNodesArray.length; i++) {
+            require(
+                runInfo.computeNodesArray[i] != account,
+                "Compute node already joined training run"
+            )
+        }
+        require(
+            // checks the node's index is 0, default value
+            runInfo.computeNodes[account].index == 0 &&
+                (runInfo.computeNodesArray.length == 0 ||
+                    runInfo.computeNodesArray[0] != account),
+            "Compute node already in training run"
+        );
+
         runInfo.computeNodesArray.push(account);
         runInfo.computeNodes[account].index =
             runInfo.computeNodesArray.length -
@@ -178,7 +192,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /// must be Prime Intellect admin
     function startTrainingRun(
         uint256 trainingRunId
-    ) external override returns (bool) {
+    ) external override onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
             runInfo.status == ModelStatus.Registered,
@@ -247,18 +261,14 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return nodeInfo.attestations.length;
     }
 
-    /**
-     * @dev Returns addresses of compute nodes registered for a training run
-     */
+    /// @dev Returns addresses of compute nodes registered for a training run
     function getComputeNodesForTrainingRun(
         uint256 trainingRunId
     ) external view returns (address[] memory) {
         return trainingRunData[trainingRunId].computeNodesArray;
     }
 
-    /**
-     * @dev Returns attestations of a compute node
-     */
+    /// @dev Returns attestations of a compute node
     function getAttestationsForComputeNode(
         uint256 trainingRunId,
         address account
