@@ -189,32 +189,4 @@ contract StakingManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testUpdateMinDeposit() public {
-        // initial value, see constructor
-        uint256 initialMinDeposit = stakingManager.MIN_DEPOSIT();
-
-        // new min deposit value
-        uint256 newMinDeposit = 20000 * 1e18;
-
-        // vm.prank(computeNode);
-        // vm.expectRevert(
-        //     "AccessControl: account 0x0000000000000000000000000000000000000002 is missing role 0x0000000000000000000000000000000000000000000000000000000000000000"
-        // );
-        // stakingManager.updateMinDeposit(newMinDeposit);
-
-        // assertEq(
-        //     stakingManager.MIN_DEPOSIT(),
-        //     initialMinDeposit,
-        //     "MIN_DEPOSIT should not have changed"
-        // );
-
-        // vm.prank(admin);
-        // stakingManager.updateMinDeposit(newMinDeposit);
-
-        // assertEq(
-        //     stakingManager.MIN_DEPOSIT(),
-        //     newMinDeposit,
-        //     "MIN_DEPOSIT should have been updated"
-        // );
-    }
 }
