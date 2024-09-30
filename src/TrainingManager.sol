@@ -145,7 +145,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
 
     /// @dev Starts training run
     /// must be Prime Intellect admin
-
     function startTrainingRun(uint256 _trainingRunId) external override returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
         require(runInfo.status == ModelStatus.Registered, "Invalid training run status");
@@ -164,9 +163,10 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return true;
     }
 
-    /**
-     * @dev Submit attestation
-     */
+    /// @notice Submits attestation that successful training iteration was computed
+    /// @param account wallet address of compute node
+    /// @param trainingRunId the id for the training run
+    /// @param attestation bytes computed on client side to verify training iteration
     function submitAttestation(address account, uint256 trainingRunId, bytes memory attestation)
         external
         override
