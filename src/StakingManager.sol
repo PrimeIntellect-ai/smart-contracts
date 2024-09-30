@@ -107,6 +107,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     }
 
     /// @notice challenges posted for a specific training hash (compute provider & training run Id)
+    /// Challenge is for notification purposes only at the moment.
     /// returns challengeId
     function challenge(uint256 trainingRunId, address computeNode) external whenNotPaused returns (uint256) {
         require(
