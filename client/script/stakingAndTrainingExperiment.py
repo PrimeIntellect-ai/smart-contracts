@@ -1,6 +1,11 @@
 """
 
-e2e testing integration script.
+Demo of an e2e testing integration script.
+
+Some methods will be best integrated on a
+frontend, which will be up to the decision
+of Prime Intellect as to how they would
+like to integrate those method calls.
 
 """
 
