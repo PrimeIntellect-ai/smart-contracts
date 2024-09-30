@@ -24,4 +24,8 @@ contract PrimeIntellectToken is ERC20, AccessControl {
     function totalSupply() public view override returns (uint256) {
         return super.totalSupply();
     }
+
+    function getMinterRole() public pure returns (bytes32) {
+        return MINTER_ROLE;
+    }
 }

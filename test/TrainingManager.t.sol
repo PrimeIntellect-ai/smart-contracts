@@ -23,10 +23,7 @@ contract TrainingManagerTest is Test {
 
         PIN = new PrimeIntellectToken("Prime Intellect Token", "PIN");
         trainingManager = new TrainingManager();
-        stakingManager = new StakingManager(
-            address(PIN),
-            address(trainingManager)
-        );
+        stakingManager = new StakingManager(address(PIN), address(trainingManager));
 
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
@@ -44,34 +41,17 @@ contract TrainingManagerTest is Test {
         string memory modelName = "Test Model";
         uint256 modelBudget = 1000;
 
-        uint256 trainingRunId = trainingManager.registerModel(
-            modelName,
-            modelBudget
-        );
+        uint256 trainingRunId = trainingManager.registerModel(modelName, modelBudget);
 
-        console.log("New model registered with trainingRunId:", trainingRunId);
-
-        assertEq(
-            trainingManager.name(trainingRunId),
-            modelName,
-            "Model name not set correctly"
-        );
-        assertEq(
-            trainingManager.budget(trainingRunId),
-            modelBudget,
-            "Model budget not set correctly"
-        );
+        assertEq(trainingManager.name(trainingRunId), modelName, "Model name not set correctly");
+        assertEq(trainingManager.budget(trainingRunId), modelBudget, "Model budget not set correctly");
         assertEq(
             uint256(trainingManager.getModelStatus(trainingRunId)),
             uint256(ITrainingManager.ModelStatus.Registered),
             "Model status not set to Registered"
         );
 
-        assertEq(
-            trainingManager.trainingRunIdCount(),
-            trainingRunId,
-            "trainingRunIdCount not incremented correctly"
-        );
+        assertEq(trainingManager.trainingRunIdCount(), trainingRunId, "trainingRunIdCount not incremented correctly");
 
         string memory anotherModel = "Test Model";
         uint256 anotherBudget = 1000;
@@ -92,9 +72,6 @@ contract TrainingManagerTest is Test {
 
         bool isValid = trainingManager.isComputeNodeValid(computeNode2);
 
-        console.log("Compute node address:", computeNode2);
-        console.log("Is compute node valid:", isValid);
-
         assertTrue(isValid, "Compute node should be valid after registration");
 
         vm.expectRevert("Compute node already registered");
@@ -103,22 +80,14 @@ contract TrainingManagerTest is Test {
         address anotherComputeNode = address(4);
         trainingManager.addComputeNode(anotherComputeNode);
 
-        bool isAnotherValid = trainingManager.isComputeNodeValid(
-            (anotherComputeNode)
-        );
+        bool isAnotherValid = trainingManager.isComputeNodeValid((anotherComputeNode));
 
-        console.log("Another compute node address:", anotherComputeNode);
-        console.log("Is another compute node valid:", isAnotherValid);
-
-        assertTrue(
-            isAnotherValid,
-            "Another compute node should be valid after registration"
-        );
+        assertTrue(isAnotherValid, "Another compute node should be valid after registration");
 
         vm.stopPrank();
     }
 
-    function testJoinTrainingRun() public {
+    function test_JoinTrainingRun() public {
         string memory ipAddress = "192.168.1.1";
         uint256 stakeAmount = MIN_DEPOSIT + MIN_DEPOSIT;
 
@@ -127,60 +96,33 @@ contract TrainingManagerTest is Test {
         string memory modelName = "Test Model";
         uint256 modelBudget = 1000;
 
-        uint256 trainingRunId = trainingManager.registerModel(
-            modelName,
-            modelBudget
-        );
+        uint256 trainingRunId = trainingManager.registerModel(modelName, modelBudget);
         vm.stopPrank();
 
         vm.startPrank(computeNode);
-        console.log(
-            "Compute node balance before stake is:",
-            PIN.balanceOf(computeNode)
-        );
 
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode, stakeAmount);
-        console.log(
-            "Compute node balance after stake is:",
-            PIN.balanceOf(computeNode)
-        );
+        stakingManager.stake(stakeAmount);
 
-        bool success = trainingManager.joinTrainingRun(
-            computeNode,
-            ipAddress,
-            trainingRunId
-        );
+        bool success = trainingManager.joinTrainingRun(computeNode, ipAddress, trainingRunId);
 
         assertTrue(success, "Failed to join training run");
 
-        (
-            string memory name,
-            uint256 budget,
-            ITrainingManager.ModelStatus status,
-            address[] memory computeNodes
-        ) = trainingManager.getTrainingRunInfo(trainingRunId);
+        (string memory name, uint256 budget, ITrainingManager.ModelStatus status, address[] memory computeNodes) =
+            trainingManager.getTrainingRunInfo(trainingRunId);
 
-        console.log("Training Run Info:");
-        console.log("Name:", name);
-        console.log("Budget:", budget);
-        console.log("Status:", uint(status));
-        console.log("Compute Nodes:");
-        for (uint i = 0; i < computeNodes.length; i++) {
-            console.log(computeNodes[i]);
-        }
+        uint256(status);
+
+        assertEq(name, modelName, "Name should match constructor");
+        assertEq(budget, modelBudget, "Budget should match constructor");
         assertEq(computeNodes.length, 1, "Should have one compute node");
-        assertEq(
-            computeNodes[0],
-            computeNode,
-            "Compute node should be added to the training run"
-        );
+        assertEq(computeNodes[0], computeNode, "Compute node should be added to the training run");
 
         vm.stopPrank();
     }
 
     /// test to start a training run and submit attestations
-    function testStartAndSubmit() public {
+    function test_StartAndSubmit() public {
         string memory ipAddress1 = "192.168.1.1";
         uint256 stakeAmount = MIN_DEPOSIT;
 
@@ -189,49 +131,30 @@ contract TrainingManagerTest is Test {
         string memory modelName = "Test Model";
         uint256 modelBudget = 1000;
 
-        uint256 trainingRunId = trainingManager.registerModel(
-            modelName,
-            modelBudget
-        );
+        uint256 trainingRunId = trainingManager.registerModel(modelName, modelBudget);
 
-        TrainingManager.ModelStatus status0 = trainingManager
-            .getTrainingRunStatus(trainingRunId);
-        console.log("Training Run Status before start:", uint256(status0)); // log status as uint
+        TrainingManager.ModelStatus status0 = trainingManager.getTrainingRunStatus(trainingRunId);
 
         vm.stopPrank();
 
         vm.startPrank(computeNode);
         // join run
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode, stakeAmount);
+        stakingManager.stake(stakeAmount);
         trainingManager.joinTrainingRun(computeNode, ipAddress1, trainingRunId);
         vm.stopPrank();
 
         // start run
         vm.startPrank(admin);
         trainingManager.startTrainingRun(trainingRunId);
-        console.log("TrainingRunId is:", trainingRunId);
-
-        // Display status after starting training run
-        TrainingManager.ModelStatus status1 = trainingManager
-            .getTrainingRunStatus(trainingRunId);
-        console.log("Training Run Status after start:", uint256(status1)); // log status as uint 1
         vm.stopPrank();
 
         // submit attestations
         vm.startPrank(computeNode);
         bytes memory attestation = abi.encode("Sample attestation data");
 
-        trainingManager.submitAttestation(
-            computeNode,
-            trainingRunId,
-            attestation
-        );
-        uint256 attestationCount = trainingManager.getAttestations(
-            trainingRunId,
-            computeNode
-        );
-        console.log("Number of attestations submitted:", attestationCount);
+        trainingManager.submitAttestation(computeNode, trainingRunId, attestation);
+        uint256 attestationCount = trainingManager.getAttestations(trainingRunId, computeNode);
 
         assertEq(attestationCount, 1);
         vm.stopPrank();

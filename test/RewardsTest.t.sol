@@ -7,6 +7,10 @@ import "../src/StakingManager.sol";
 import "../src/PrimeIntellectToken.sol";
 import "../src/TrainingManager.sol";
 
+/////////////////////////////////////////
+////         e2e rewards test         ///
+/////////////////////////////////////////
+
 contract StakingManagerTest is Test {
     StakingManager public stakingManager;
     TrainingManager public trainingManager;
@@ -24,10 +28,7 @@ contract StakingManagerTest is Test {
 
         PIN = new PrimeIntellectToken("Prime-Intellect-Token", "PIN");
         trainingManager = new TrainingManager();
-        stakingManager = new StakingManager(
-            address(PIN),
-            address(trainingManager)
-        );
+        stakingManager = new StakingManager(address(PIN), address(trainingManager));
 
         PIN.grantRole(PIN.MINTER_ROLE(), address(stakingManager));
         // Set the StakingManager address in TrainingManager
@@ -37,32 +38,19 @@ contract StakingManagerTest is Test {
         PIN.mint(computeNode, INITIAL_SUPPLY);
         trainingManager.addComputeNode(computeNode);
         vm.stopPrank();
-
-        console.log("MIN_DEPOSIT:", stakingManager.MIN_DEPOSIT());
     }
 
     /// @notice helper function used in succeeding test cases
-    function _setupMockTrainingRuns(
-        uint256[] memory attestationCounts
-    ) internal returns (uint256[] memory) {
-        uint256[] memory trainingRunIds = new uint256[](
-            attestationCounts.length
-        );
+    function _setupMockTrainingRuns(uint256[] memory attestationCounts) internal returns (uint256[] memory) {
+        uint256[] memory trainingRunIds = new uint256[](attestationCounts.length);
 
         for (uint256 j = 0; j < attestationCounts.length; j++) {
             vm.startPrank(admin);
 
-            uint256 trainingRunId = trainingManager.registerModel(
-                string(abi.encodePacked("TestModel", j)),
-                1000 * 1e18
-            );
+            uint256 trainingRunId = trainingManager.registerModel(string(abi.encodePacked("TestModel", j)), 1000 * 1e18);
 
             // Join the training run before starting it
-            trainingManager.joinTrainingRun(
-                computeNode,
-                "192.168.1.1",
-                trainingRunId
-            );
+            trainingManager.joinTrainingRun(computeNode, "192.168.1.1", trainingRunId);
 
             // Start the training run
             trainingManager.startTrainingRun(trainingRunId);
@@ -70,11 +58,7 @@ contract StakingManagerTest is Test {
             /// @notice allows us to set multiple training runs j
             /// each with number of attestations i in succeeding functions
             for (uint256 i = 0; i < attestationCounts[j]; i++) {
-                trainingManager.submitAttestation(
-                    computeNode,
-                    trainingRunId,
-                    abi.encodePacked("attestation", i)
-                );
+                trainingManager.submitAttestation(computeNode, trainingRunId, abi.encodePacked("attestation", i));
             }
 
             trainingManager.endTrainingRun(trainingRunId);
@@ -82,10 +66,7 @@ contract StakingManagerTest is Test {
             uint256 endTime = block.timestamp;
             vm.mockCall(
                 address(trainingManager),
-                abi.encodeWithSelector(
-                    trainingManager.getTrainingRunEndTime.selector,
-                    trainingRunId
-                ),
+                abi.encodeWithSelector(trainingManager.getTrainingRunEndTime.selector, trainingRunId),
                 abi.encode(endTime)
             );
 
@@ -98,15 +79,13 @@ contract StakingManagerTest is Test {
     }
 
     function testClaimMultipleRuns() public {
-        uint256 stakeAmount = stakingManager.MIN_DEPOSIT() +
-            stakingManager.MIN_DEPOSIT();
-        console.log("Stake amount:", stakeAmount);
+        uint256 stakeAmount = stakingManager.MIN_DEPOSIT() + stakingManager.MIN_DEPOSIT();
 
         // staking
         vm.startPrank(computeNode);
         PIN.approve(address(stakingManager), stakeAmount);
-        console.log("Staking pin tokens");
-        stakingManager.stake(computeNode, stakeAmount);
+
+        stakingManager.stake(stakeAmount);
         vm.stopPrank();
 
         // create mock training runs using function above
@@ -122,15 +101,11 @@ contract StakingManagerTest is Test {
         uint256 initialBalance = PIN.balanceOf(computeNode);
 
         vm.prank(computeNode);
-        console.log("Claiming rewards");
+
         stakingManager.claim();
 
         uint256 expectedRewards = 23 * REWARD_RATE; // 10 + 5 + 8
         uint256 finalBalance = PIN.balanceOf(computeNode);
-        assertEq(
-            finalBalance,
-            initialBalance + expectedRewards,
-            "Incorrect rewards claimed"
-        );
+        assertEq(finalBalance, initialBalance + expectedRewards, "Incorrect rewards claimed");
     }
 }
