@@ -1,6 +1,6 @@
 """
 
-Original integration testing script.
+Original integration testing script for training logic.
 
 """
 
