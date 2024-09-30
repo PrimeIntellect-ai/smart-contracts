@@ -16,7 +16,7 @@ The goals of the PoC are as follows:
 -   **TrainingManager**: Swiss army knife for interacting with training logic. 
 -   **StakingManager**: Manager of token governance for $PIN and training logic.
 
-# Algorithm:
+## Algorithm:
 
 1. Compute nodes added to whitelist.
 2. Compute nodes deposit/stake to the network. Compute nodes will be required to maintain a minimum amount of Prime Intellect tokens staked to the network.
@@ -26,13 +26,26 @@ The goals of the PoC are as follows:
 
 See below for a system diagram of this process.
 
-# System Diagram
+## System Diagram
 
 ![systemDiagram](./documentation/systemDiagram.jpg)
 
 ## Developer Usage
 
 This project was developed using forge and tested on a local anvil testnet.
+
+# File Overview:
+
+- src
+  - interfaces
+  - PrimeIntellectToken.sol
+  - StakingManager.sol
+  - TrainingManager.sol
+- test
+  - RewardsTest.t.sol
+  - ...
+- client
+  - PrimeIntellectRewards.py
 
 ### Build
 
