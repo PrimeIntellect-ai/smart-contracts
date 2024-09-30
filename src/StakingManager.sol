@@ -92,13 +92,13 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
             _amount >= MIN_DEPOSIT,
             "Deposit amount must be greater than minimum deposit"
         );
+
         ComputeBalancesInfo storage balances = computeNodeBalances[msg.sender];
 
         require(
             PIN.transferFrom(msg.sender, address(this), _amount),
             "Transfer of PIN failed"
         );
-        PIN.transferFrom(msg.sender, address(this), _amount);
 
         balances.currentBalance = balances.currentBalance + _amount;
 
