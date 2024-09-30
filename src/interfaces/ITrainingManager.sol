@@ -8,25 +8,16 @@ interface ITrainingManager {
         Done
     }
 
-    function registerModel(
-        string memory name,
-        uint256 budget
-    ) external returns (uint256);
+    function registerModel(string memory name, uint256 budget) external returns (uint256);
 
     function name(uint256 trainingRunId) external view returns (string memory);
 
     function budget(uint256 trainingRunId) external view returns (uint256);
 
     /// @notice Gets status of training run for id
-    function getTrainingRunStatus(
-        uint256 trainingRunId
-    ) external returns (ModelStatus);
+    function getTrainingRunStatus(uint256 trainingRunId) external returns (ModelStatus);
 
-    function joinTrainingRun(
-        address account,
-        string memory ipAddress,
-        uint256 trainingRunId
-    ) external returns (bool);
+    function joinTrainingRun(address account, string memory ipAddress, uint256 trainingRunId) external returns (bool);
 
     /// @notice Registers compute node for training run
     /// @dev Function not called by compute node, so registration needs knowledge of compute nodes
@@ -42,27 +33,15 @@ interface ITrainingManager {
 
     /// @notice Submits attestion that compute was utilized for training by node
     /// @dev Function called by compute node, unlike the other functions on this interface
-    function submitAttestation(
-        address account,
-        uint256 trainingRunId,
-        bytes memory attestation
-    ) external returns (bool);
+    function submitAttestation(address account, uint256 trainingRunId, bytes memory attestation)
+        external
+        returns (bool);
 
-    function getAttestations(
-        uint256 trainingRunId,
-        address account
-    ) external returns (uint256);
+    function getAttestations(uint256 trainingRunId, address account) external returns (uint256);
 
-    function getComputeNodesForTrainingRun(
-        uint256 trainingRunId
-    ) external returns (address[] memory);
+    function getComputeNodesForTrainingRun(uint256 trainingRunId) external returns (address[] memory);
 
-    function getAttestationsForComputeNode(
-        uint256 trainingId,
-        address account
-    ) external returns (bytes[] memory);
+    function getAttestationsForComputeNode(uint256 trainingId, address account) external returns (bytes[] memory);
 
-    function getTrainingRunEndTime(
-        uint256 trainingRunId
-    ) external returns (uint256);
+    function getTrainingRunEndTime(uint256 trainingRunId) external returns (uint256);
 }

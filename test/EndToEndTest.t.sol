@@ -27,10 +27,7 @@ contract EndToEndTest is Test {
 
         PIN = new PrimeIntellectToken("Prime Intellect Token", "PIN");
         trainingManager = new TrainingManager();
-        stakingManager = new StakingManager(
-            address(PIN),
-            address(trainingManager)
-        );
+        stakingManager = new StakingManager(address(PIN), address(trainingManager));
 
         trainingManager.setStakingManager(address(stakingManager));
 

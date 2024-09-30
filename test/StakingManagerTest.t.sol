@@ -17,34 +17,25 @@ contract StakingManagerTest is Test {
     address public computeNode = address(2);
 
     uint256 public constant INITIAL_SUPPLY = 100000 * 10 ** 18; // 100,000 tokens
-    uint256 public constant MIN_DEPOSIT = 10000 * 10 ** 18; // 1000 tokens
+    uint256 public constant MIN_DEPOSIT = 10000 * 10 ** 18; // 1,000 tokens
 
     function setUp() public {
         vm.startPrank(admin);
 
         PIN = new PrimeIntellectToken("Prime-Intellect-Token", "PIN");
         trainingManager = new TrainingManager();
-        stakingManager = new StakingManager(
-            address(PIN),
-            address(trainingManager)
-        );
-        console.log("StakingManager deployed at:", address(stakingManager));
+        stakingManager = new StakingManager(address(PIN), address(trainingManager));
 
         PIN.grantRole(PIN.MINTER_ROLE(), address(stakingManager));
-        console.log("MINTER_ROLE for minting granted to staking manager");
 
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
-        console.log("StakingManager set in TrainingManager");
 
         PIN.mint(computeNode, INITIAL_SUPPLY);
-        console.log("Initial supply minted to compute node");
 
         trainingManager.addComputeNode(computeNode);
-        console.log("Compute node registered in TrainingManager");
 
         vm.stopPrank();
-        console.log("setUp completed successfully");
     }
 
     function test_stake() public {
@@ -53,39 +44,29 @@ contract StakingManagerTest is Test {
         vm.startPrank(computeNode);
 
         uint256 initialPINBalance = PIN.balanceOf(computeNode);
-        uint256 initialStakedBalance = stakingManager.getComputeNodeBalance(
-            computeNode
-        );
+        uint256 initialStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
+
 
         stakingManager.stake(computeNode, stakeAmount);
 
-        uint256 finalPINBalance = PIN.balanceOf(computeNode);
-        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
-            computeNode
-        );
+        PIN.approve(address(stakingManager), stakeAmount);
 
-        assertEq(
-            finalPINBalance,
-            initialPINBalance - stakeAmount,
-            "PIN balance should decrease by staked amount"
-        );
+        stakingManager.stake(stakeAmount);
+
+        uint256 finalPINBalance = PIN.balanceOf(computeNode);
+        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
+
+        assertEq(finalPINBalance, initialPINBalance - stakeAmount, "PIN balance should decrease by staked amount");
 
         // check if the staked balance increased by staked amount
         assertEq(
-            finalStakedBalance,
-            initialStakedBalance + stakeAmount,
-            "Staked balance should increase by staked amount"
+            finalStakedBalance, initialStakedBalance + stakeAmount, "Staked balance should increase by staked amount"
         );
 
-        assertTrue(
-            stakeAmount > stakingManager.MIN_DEPOSIT(),
-            "Staked amount should be greater than minimum deposit"
-        );
+        assertTrue(stakeAmount > stakingManager.MIN_DEPOSIT(), "Staked amount should be greater than minimum deposit");
 
         assertEq(
-            PIN.balanceOf(address(stakingManager)),
-            stakeAmount,
-            "StakingManager balance should match staked amount"
+            PIN.balanceOf(address(stakingManager)), stakeAmount, "StakingManager balance should match staked amount"
         );
 
         vm.stopPrank();
@@ -94,14 +75,8 @@ contract StakingManagerTest is Test {
         uint256 lowStakeAmount = stakingManager.MIN_DEPOSIT() - 1;
         PIN.approve(address(stakingManager), lowStakeAmount);
         vm.expectRevert("Deposit amount must be greater than minimum deposit");
-        stakingManager.stake(computeNode, lowStakeAmount);
+        stakingManager.stake(lowStakeAmount);
         vm.stopPrank();
-
-        console.log("Staking test passed successfully");
-        console.log("Initial PIN balance:", initialPINBalance);
-        console.log("Staked amount:", stakeAmount);
-        console.log("Final PIN balance:", finalPINBalance);
-        console.log("Final staked balance:", finalStakedBalance);
     }
 
     function testMultipleStakes() public {
@@ -175,29 +150,22 @@ contract StakingManagerTest is Test {
         vm.startPrank(computeNode);
 
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode, stakeAmount);
+        stakingManager.stake(stakeAmount);
 
-        uint256 stakedBalanceBeforeWithdraw = stakingManager
-            .getComputeNodeBalance(computeNode);
+        uint256 stakedBalanceBeforeWithdraw = stakingManager.getComputeNodeBalance(computeNode);
 
         uint256 withdrawAmount = MIN_DEPOSIT;
 
         // withdraw step
         stakingManager.withdraw(MIN_DEPOSIT);
 
-        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
-            computeNode
-        );
+        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
 
         assertEq(
             finalStakedBalance,
             stakedBalanceBeforeWithdraw - withdrawAmount,
             "PIN balance should decrease by withdraw amount"
         );
-
-        console.log("Initial PIN balance:", stakedBalanceBeforeWithdraw);
-        console.log("Withdrawn amount:", withdrawAmount);
-        console.log("Final staked balance:", finalStakedBalance);
 
         vm.stopPrank();
     }
