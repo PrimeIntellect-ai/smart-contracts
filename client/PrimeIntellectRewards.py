@@ -1,3 +1,20 @@
+"""
+
+Example object for a client to interface with smart contracts.
+
+This code assumes access to local .json files for smart contract
+ABIs, but has not yet been tested with testnet deployed solidity.
+
+Whether being instantiated on a compute node or on prime intellect
+infrastructure, different methods should be integrated at different
+steps of the training process. 
+
+This code assumes access to the appropriate keys for each of the 
+methods meant to be called by a compute node or prime intellect
+node. These keys are assumed to be set as environment vars in .env
+
+"""
+
 from web3 import Web3
 from dotenv import load_dotenv
 import os
