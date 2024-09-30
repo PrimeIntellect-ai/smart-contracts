@@ -24,14 +24,22 @@ contract TrainingManager is ITrainingManager, AccessControl {
     }
 
     mapping(uint256 => TrainingRunInfo) public trainingRunData;
+
+    // compute node whitelist
     mapping(address => bool) public registeredValidComputeNodes;
-    mapping(address => string) public registeredComputeNodes;
+
+    // mapping to check for duplicate model registrations
+    mapping(bytes32 => bool) public registeredModelHashes;
 
     uint256 public trainingRunIdCount;
 
     event ComputeNodeAdded(address indexed account);
-    event TrainingRunEnded(uint256 trainingRunId, uint256 endTime);
-    event AttestationSubmitted(address indexed computeNode, uint256 trainingRunId);
+
+    event TrainingRunEnded(uint256 _trainingRunId, uint256 endTime);
+    event AttestationSubmitted(
+        address indexed computeNode,
+        uint256 trainingRunId
+    );
     event StakingManagerSet(address stakingManager);
 
     constructor() {
@@ -48,12 +56,22 @@ contract TrainingManager is ITrainingManager, AccessControl {
     ////           MODEL SETUP        ///
     /////////////////////////////////////
 
-    function registerModel(string memory _name, uint256 _budget) external override returns (uint256) {
+
+    function registerModel(
+        string memory _name,
+        uint256 _budget
+    ) external override returns (uint256) {
+        bytes32 modelHash = keccak256(abi.encodePacked(_name, _budget));
+        require(!registeredModelHashes[modelHash], "Model already registered");
+
         trainingRunIdCount++;
         TrainingRunInfo storage newRun = trainingRunData[trainingRunIdCount];
         newRun.status = ModelStatus.Registered;
         newRun.name = _name;
         newRun.budget = _budget;
+
+        registeredModelHashes[modelHash] = true;
+
         return trainingRunIdCount;
     }
 
@@ -135,21 +153,33 @@ contract TrainingManager is ITrainingManager, AccessControl {
 
     /// @dev Starts training run
     /// must be Prime Intellect admin
-    function startTrainingRun(uint256 trainingRunId) external override returns (bool) {
-        TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
-        require(runInfo.status == ModelStatus.Registered, "Invalid training run status");
+
+    function startTrainingRun(
+        uint256 _trainingRunId
+    ) external override returns (bool) {
+        TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
+        require(
+            runInfo.status == ModelStatus.Registered,
+            "Invalid training run status"
+        );
         runInfo.status = ModelStatus.Running;
         return true;
     }
 
-    /// @notice Called by compute nodes to end training run
-    /// Prime Intellect admin
-    function endTrainingRun(uint256 trainingRunId) external returns (bool) {
-        TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
-        require(runInfo.status == ModelStatus.Running, "Training run is not in Running state");
+
+    /// @notice Can only be called by Prime Intellect admin to end the training run
+    function endTrainingRun(
+        uint256 _trainingRunId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
+        TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
+        require(
+            runInfo.status == ModelStatus.Running,
+            "Training run is not in Running state"
+        );
+
         runInfo.status = ModelStatus.Done;
         runInfo.endTime = block.timestamp;
-        emit TrainingRunEnded(trainingRunId, runInfo.endTime);
+        emit TrainingRunEnded(_trainingRunId, runInfo.endTime);
         return true;
     }
 
