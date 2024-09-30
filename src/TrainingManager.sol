@@ -35,10 +35,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
 
     event ComputeNodeAdded(address indexed account);
     event TrainingRunEnded(uint256 _trainingRunId, uint256 endTime);
-    event AttestationSubmitted(
-        address indexed computeNode,
-        uint256 trainingRunId
-    );
+    event AttestationSubmitted(address indexed computeNode, uint256 trainingRunId);
     event StakingManagerSet(address stakingManager);
 
     constructor() {
@@ -60,10 +57,8 @@ contract TrainingManager is ITrainingManager, AccessControl {
     ////           MODEL SETUP        ///
     /////////////////////////////////////
 
-    function registerModel(
-        string memory _name,
-        uint256 _budget
-    ) external override returns (uint256) {
+
+    function registerModel(string memory _name, uint256 _budget) external override returns (uint256) {
         bytes32 modelHash = keccak256(abi.encodePacked(_name, _budget));
         require(!registeredModelHashes[modelHash], "Model already registered");
 
@@ -143,10 +138,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         );
 
         for (uint256 i = 0; i < runInfo.computeNodesArray.length; i++) {
-            require(
-                runInfo.computeNodesArray[i] != account,
-                "Compute node already joined training run"
-            );
+            require(runInfo.computeNodesArray[i] != account, "Compute node already joined training run");
         }
         require(
             // checks the node's index is 0, default value
@@ -184,28 +176,17 @@ contract TrainingManager is ITrainingManager, AccessControl {
 
     /// @dev Starts training run
     /// must be Prime Intellect admin
-
-    function startTrainingRun(
-        uint256 _trainingRunId
-    ) external override returns (bool) {
+    function startTrainingRun(uint256 _trainingRunId) external override returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
-        require(
-            runInfo.status == ModelStatus.Registered,
-            "Invalid training run status"
-        );
+        require(runInfo.status == ModelStatus.Registered, "Invalid training run status");
         runInfo.status = ModelStatus.Running;
         return true;
     }
 
     /// @notice Can only be called by Prime Intellect admin to end the training run
-    function endTrainingRun(
-        uint256 _trainingRunId
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
+    function endTrainingRun(uint256 _trainingRunId) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
-        require(
-            runInfo.status == ModelStatus.Running,
-            "Training run is not in Running state"
-        );
+        require(runInfo.status == ModelStatus.Running, "Training run is not in Running state");
 
         runInfo.status = ModelStatus.Done;
         runInfo.endTime = block.timestamp;
@@ -213,13 +194,15 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return true;
     }
 
-    /// @notice Attestations submitted by compute nodes during training process
-    /// For PoC, a custom implementation has been added to OpenDiloco
-    function submitAttestation(
-        address account,
-        uint256 trainingRunId,
-        bytes memory attestation
-    ) external override returns (bool) {
+    /// @notice Submits attestation that successful training iteration was computed
+    /// @param account wallet address of compute node
+    /// @param trainingRunId the id for the training run
+    /// @param attestation bytes computed on client side to verify training iteration
+    function submitAttestation(address account, uint256 trainingRunId, bytes memory attestation)
+        external
+        override
+        returns (bool)
+    {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
             runInfo.status == ModelStatus.Running,
@@ -262,18 +245,17 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return nodeInfo.attestations.length;
     }
 
-    /// @notice Returns addresses of compute nodes registered for a training run
-    function getComputeNodesForTrainingRun(
-        uint256 trainingRunId
-    ) external view returns (address[] memory) {
+    /// @dev Returns addresses of compute nodes registered for a training run
+    function getComputeNodesForTrainingRun(uint256 trainingRunId) external view returns (address[] memory) {
         return trainingRunData[trainingRunId].computeNodesArray;
     }
 
-    /// @notice Returns attestations array for given training run and compute node
-    function getAttestationsForComputeNode(
-        uint256 trainingRunId,
-        address account
-    ) external view returns (bytes[] memory) {
+    /// @dev Returns attestations array for given training run and compute node
+    function getAttestationsForComputeNode(uint256 trainingRunId, address account)
+        external
+        view
+        returns (bytes[] memory)
+    {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         ComputeNodeInfo storage nodeInfo = runInfo.computeNodes[account];
         require(
@@ -284,9 +266,8 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return nodeInfo.attestations;
     }
 
-    function getTrainingRunInfo(
-        uint256 trainingRunId
-    )
+    /// @dev Returns name, budget, status, and nodes for a training run
+    function getTrainingRunInfo(uint256 trainingRunId)
         external
         view
         returns (
@@ -305,9 +286,8 @@ contract TrainingManager is ITrainingManager, AccessControl {
         );
     }
 
-    function getTrainingRunEndTime(
-        uint256 trainingRunId
-    ) external view override returns (uint256) {
+    /// @dev Returns end time assuming that a run has in fact completed
+    function getTrainingRunEndTime(uint256 trainingRunId) external view override returns (uint256) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
             runInfo.status == ModelStatus.Done,
