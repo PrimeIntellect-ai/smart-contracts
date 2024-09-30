@@ -109,3 +109,4 @@ $ cast --help
 [ ] challenge logic
 [ ] upgradeability
 [ ] testnet deploy
+[ ] security audit
