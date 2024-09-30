@@ -102,11 +102,12 @@ $ cast --help
 
 # Future
 
-[ ] dynamic rewards per attestation
-[ ] stake to model training runs
-[ ] stake to compute nodes
-[ ] model trainer role
-[ ] challenge logic
-[ ] upgradeability
-[ ] testnet deploy
-[ ] security audit
+- [ ] dynamic rewards per attestation
+- [ ] stake to model training runs
+- [ ] stake to compute nodes
+- [ ] model trainer role
+- [ ] challenge logic
+- [ ] upgradeability
+- [ ] testnet deploy
+- [ ] security audit
+- [ ] integration to existing Prime Intellect systems
