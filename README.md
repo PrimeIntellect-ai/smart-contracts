@@ -99,3 +99,13 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+# Future
+
+[ ] dynamic rewards per attestation
+[ ] stake to model training runs
+[ ] stake to compute nodes
+[ ] model trainer role
+[ ] challenge logic
+[ ] upgradeability
+[ ] testnet deploy
