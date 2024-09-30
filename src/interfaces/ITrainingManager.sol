@@ -13,10 +13,6 @@ interface ITrainingManager {
         uint256 budget
     ) external returns (uint256);
 
-    function getModelStatus(
-        uint256 trainingRunId
-    ) external view returns (ModelStatus);
-
     function name(uint256 trainingRunId) external view returns (string memory);
 
     function budget(uint256 trainingRunId) external view returns (uint256);

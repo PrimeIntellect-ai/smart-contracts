@@ -30,7 +30,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     uint256 public trainingRunIdCount;
 
     event ComputeNodeAdded(address indexed account);
-    event EndTrainingRun(uint256 trainingRunId, uint256 endTime);
+    event TrainingRunEnded(uint256 trainingRunId, uint256 endTime);
     event AttestationSubmitted(
         address indexed computeNode,
         uint256 trainingRunId
@@ -61,21 +61,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
         string memory _name,
         uint256 _budget
     ) external override returns (uint256) {
-        // Check for duplicates
-        for (uint256 i = 1; i <= trainingRunIdCount; i++) {
-            TrainingRunInfo storage existingRun = trainingRunData[i];
-            if (
-                keccak256(abi.encodePacked(existingRun.name)) ==
-                keccak256(abi.encodePacked(_name)) &&
-                existingRun.budget == _budget
-            ) {
-                revert(
-                    "Training run with same name and budget already exists."
-                );
-            }
-        }
-
-        // Increment training run id count and register new model
         trainingRunIdCount++;
         TrainingRunInfo storage newRun = trainingRunData[trainingRunIdCount];
         newRun.status = ModelStatus.Registered;
@@ -92,7 +77,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /// @notice returns status of training run
     function getModelStatus(
         uint256 trainingRunId
-    ) external view override returns (ModelStatus) {
+    ) external view returns (ModelStatus) {
         return trainingRunData[trainingRunId].status;
     }
 
@@ -152,7 +137,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
             require(
                 runInfo.computeNodesArray[i] != account,
                 "Compute node already joined training run"
-            )
+            );
         }
         require(
             // checks the node's index is 0, default value
@@ -192,7 +177,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /// must be Prime Intellect admin
     function startTrainingRun(
         uint256 trainingRunId
-    ) external override onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
+    ) external override returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
             runInfo.status == ModelStatus.Registered,
@@ -203,6 +188,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     }
 
     /// @notice Called by compute nodes to end training run
+    /// Prime Intellect admin
     function endTrainingRun(uint256 trainingRunId) external returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
@@ -211,12 +197,14 @@ contract TrainingManager is ITrainingManager, AccessControl {
         );
         runInfo.status = ModelStatus.Done;
         runInfo.endTime = block.timestamp;
-        emit EndTrainingRun(trainingRunId, runInfo.endTime);
+        emit TrainingRunEnded(trainingRunId, runInfo.endTime);
         return true;
     }
 
-    /// @notice Submits attestion that compute was utilized for training by node
-    /// @dev Function called by compute node
+    /**
+     * @dev Submit attestation
+     */
+
     function submitAttestation(
         address account,
         uint256 trainingRunId,
@@ -261,14 +249,18 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return nodeInfo.attestations.length;
     }
 
-    /// @dev Returns addresses of compute nodes registered for a training run
+    /**
+     * @dev Returns addresses of compute nodes registered for a training run
+     */
     function getComputeNodesForTrainingRun(
         uint256 trainingRunId
     ) external view returns (address[] memory) {
         return trainingRunData[trainingRunId].computeNodesArray;
     }
 
-    /// @dev Returns attestations of a compute node
+    /**
+     * @dev Returns attestations of a compute node
+     */
     function getAttestationsForComputeNode(
         uint256 trainingRunId,
         address account
