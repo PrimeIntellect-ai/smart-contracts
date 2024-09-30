@@ -102,7 +102,8 @@ contract TrainingManager is ITrainingManager, AccessControl {
         require(runInfo.status == ModelStatus.Registered, "Invalid training run status");
 
         for (uint256 i = 0; i < runInfo.computeNodesArray.length; i++) {
-            require(runInfo.computeNodesArray[i] != account, "Compute node already joined training run");
+
+        require(runInfo.computeNodesArray[i] != account, "Compute node already joined training run");
         }
         require(
             // checks the node's index is 0, default value

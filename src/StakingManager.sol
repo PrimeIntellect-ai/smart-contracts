@@ -88,6 +88,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// @notice when a user deposits, we will check that user against whitelist.
     /// Only whitelisted Compute Nodes can stake.
     /// Balance associated to compute node address
+
     function stake(uint256 _amount) external nonReentrant {
         // require(
         //     trainingManager.isComputeNodeValid(msg.sender),
