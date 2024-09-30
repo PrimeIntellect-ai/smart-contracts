@@ -34,7 +34,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     uint256 public trainingRunIdCount;
 
     event ComputeNodeAdded(address indexed account);
-    event TrainingRunEnded(uint256 trainingRunId, uint256 endTime);
+    event TrainingRunEnded(uint256 _trainingRunId, uint256 endTime);
     event AttestationSubmitted(
         address indexed computeNode,
         uint256 trainingRunId
@@ -72,6 +72,9 @@ contract TrainingManager is ITrainingManager, AccessControl {
         newRun.status = ModelStatus.Registered;
         newRun.name = _name;
         newRun.budget = _budget;
+
+        registeredModelHashes[modelHash] = true;
+
         return trainingRunIdCount;
     }
 
@@ -177,9 +180,9 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /// @dev Starts training run
     /// must be Prime Intellect admin
     function startTrainingRun(
-        uint256 trainingRunId
+        uint256 _trainingRunId
     ) external override returns (bool) {
-        TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
+        TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
         require(
             runInfo.status == ModelStatus.Registered,
             "Invalid training run status"
@@ -188,17 +191,18 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return true;
     }
 
-    /// @notice Called by compute nodes to end training run
-    /// Prime Intellect admin
-    function endTrainingRun(uint256 trainingRunId) external returns (bool) {
-        TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
+    /// @notice Can only be called by Prime Intellect admin to end the training run
+    function endTrainingRun(
+        uint256 _trainingRunId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
+        TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
         require(
             runInfo.status == ModelStatus.Running,
             "Training run is not in Running state"
         );
         runInfo.status = ModelStatus.Done;
         runInfo.endTime = block.timestamp;
-        emit TrainingRunEnded(trainingRunId, runInfo.endTime);
+        emit TrainingRunEnded(_trainingRunId, runInfo.endTime);
         return true;
     }
 

@@ -39,7 +39,7 @@ contract TrainingManagerTest is Test {
     }
 
     function test_registerNewModel() public {
-        vm.startPrank(msg.sender);
+        vm.startPrank(admin);
 
         string memory modelName = "Test Model";
         uint256 modelBudget = 1000;
@@ -76,9 +76,7 @@ contract TrainingManagerTest is Test {
         string memory anotherModel = "Test Model";
         uint256 anotherBudget = 1000;
 
-        vm.expectRevert(
-            "Training run with same name and budget already exists."
-        );
+        vm.expectRevert("Model already registered");
         trainingManager.registerModel(anotherModel, anotherBudget);
 
         vm.stopPrank();
@@ -236,6 +234,38 @@ contract TrainingManagerTest is Test {
         console.log("Number of attestations submitted:", attestationCount);
 
         assertEq(attestationCount, 1);
+        vm.stopPrank();
+    }
+
+    function EndTrainingRunTest() public {
+        vm.startPrank(admin);
+
+        string memory modelName = "Test Model";
+        uint256 modelBudget = 1000;
+
+        uint256 trainingRunId = trainingManager.registerModel(
+            modelName,
+            modelBudget
+        );
+
+        TrainingManager.ModelStatus status0 = trainingManager
+            .getTrainingRunStatus(trainingRunId);
+        console.log("Training Run Status before start:", uint256(status0)); // log status as uint
+
+        trainingManager.startTrainingRun(trainingRunId);
+        console.log("TrainingRunId is:", trainingRunId);
+
+        // Display status after starting training run
+        TrainingManager.ModelStatus status1 = trainingManager
+            .getTrainingRunStatus(trainingRunId);
+        console.log("Training Run Status after start:", uint256(status1)); // log status as uint 1
+
+        trainingManager.endTrainingRun(trainingRunId);
+
+        // Display status after ending training run
+        TrainingManager.ModelStatus status2 = trainingManager
+            .getTrainingRunStatus(trainingRunId);
+        console.log("Training run status after ending:", uint256(status2)); // log status as uint 2
         vm.stopPrank();
     }
 }
