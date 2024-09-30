@@ -133,8 +133,6 @@ contract TrainingManagerTest is Test {
 
         uint256 trainingRunId = trainingManager.registerModel(modelName, modelBudget);
 
-        TrainingManager.ModelStatus status0 = trainingManager.getTrainingRunStatus(trainingRunId);
-
         vm.stopPrank();
 
         vm.startPrank(computeNode);

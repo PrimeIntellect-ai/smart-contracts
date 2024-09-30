@@ -46,8 +46,6 @@ contract StakingManagerTest is Test {
         uint256 initialPINBalance = PIN.balanceOf(computeNode);
         uint256 initialStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
 
-        stakingManager.stake(computeNode, stakeAmount);
-
         PIN.approve(address(stakingManager), stakeAmount);
 
         stakingManager.stake(stakeAmount);
@@ -98,7 +96,7 @@ contract StakingManagerTest is Test {
         // compute node 1
         vm.startPrank(computeNode);
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode, stakeAmount);
+        stakingManager.stake(stakeAmount);
         uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
         assertEq(finalStakedBalance, stakeAmount, "Staked balance should equal first stake for compute node");
         vm.stopPrank();
@@ -106,7 +104,7 @@ contract StakingManagerTest is Test {
         // compute node 2
         vm.startPrank(computeNode2);
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode2, stakeAmount);
+        stakingManager.stake(stakeAmount);
         uint256 finalStakedBalance2 = stakingManager.getComputeNodeBalance(computeNode2);
         assertEq(finalStakedBalance2, stakeAmount, "Staked balance should equal first stake for compute node");
         vm.stopPrank();
@@ -114,7 +112,7 @@ contract StakingManagerTest is Test {
         // compute node 2
         vm.startPrank(computeNode3);
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode3, stakeAmount);
+        stakingManager.stake(stakeAmount);
         uint256 finalStakedBalance3 = stakingManager.getComputeNodeBalance(computeNode3);
         assertEq(finalStakedBalance3, stakeAmount, "Staked balance should equal first stake for compute node");
         vm.stopPrank();
