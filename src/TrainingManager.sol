@@ -34,7 +34,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
     uint256 public trainingRunIdCount;
 
     event ComputeNodeAdded(address indexed account);
-
     event TrainingRunEnded(uint256 _trainingRunId, uint256 endTime);
     event AttestationSubmitted(address indexed computeNode, uint256 trainingRunId);
     event StakingManagerSet(address stakingManager);
@@ -196,16 +195,12 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return nodeInfo.attestations.length;
     }
 
-    /**
-     * @dev Returns addresses of compute nodes registered for a training run
-     */
+    /// @dev Returns addresses of compute nodes registered for a training run
     function getComputeNodesForTrainingRun(uint256 trainingRunId) external view returns (address[] memory) {
         return trainingRunData[trainingRunId].computeNodesArray;
     }
 
-    /**
-     * @dev Returns attestations of a compute node
-     */
+    /// @dev Returns attestations of a compute node
     function getAttestationsForComputeNode(uint256 trainingRunId, address account)
         external
         view
@@ -218,6 +213,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return nodeInfo.attestations;
     }
 
+    /// @dev Returns name, budget, status, and nodes for a training run
     function getTrainingRunInfo(uint256 trainingRunId)
         external
         view
@@ -227,6 +223,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return (runInfo.name, runInfo.budget, runInfo.status, runInfo.computeNodesArray);
     }
 
+    /// @dev Returns end time assuming that a run has in fact completed
     function getTrainingRunEndTime(uint256 trainingRunId) external view override returns (uint256) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(runInfo.status == ModelStatus.Done, "Training run has not ended");
