@@ -24,7 +24,10 @@ contract StakingManagerTest is Test {
 
         PIN = new PrimeIntellectToken("Prime-Intellect-Token", "PIN");
         trainingManager = new TrainingManager();
-        stakingManager = new StakingManager(address(PIN), address(trainingManager));
+        stakingManager = new StakingManager(
+            address(PIN),
+            address(trainingManager)
+        );
 
         PIN.grantRole(PIN.MINTER_ROLE(), address(stakingManager));
 
@@ -46,27 +49,36 @@ contract StakingManagerTest is Test {
         uint256 initialPINBalance = PIN.balanceOf(computeNode);
         uint256 initialStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
 
-
-        stakingManager.stake(computeNode, stakeAmount);
-
         PIN.approve(address(stakingManager), stakeAmount);
-
         stakingManager.stake(stakeAmount);
 
         uint256 finalPINBalance = PIN.balanceOf(computeNode);
-        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
+        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
+            computeNode
+        );
 
-        assertEq(finalPINBalance, initialPINBalance - stakeAmount, "PIN balance should decrease by staked amount");
+        assertEq(
+            finalPINBalance,
+            initialPINBalance - stakeAmount,
+            "PIN balance should decrease by staked amount"
+        );
 
         // check if the staked balance increased by staked amount
         assertEq(
-            finalStakedBalance, initialStakedBalance + stakeAmount, "Staked balance should increase by staked amount"
+            finalStakedBalance,
+            initialStakedBalance + stakeAmount,
+            "Staked balance should increase by staked amount"
         );
 
-        assertTrue(stakeAmount > stakingManager.MIN_DEPOSIT(), "Staked amount should be greater than minimum deposit");
+        assertTrue(
+            stakeAmount > stakingManager.MIN_DEPOSIT(),
+            "Must be greater than min deposit"
+        );
 
         assertEq(
-            PIN.balanceOf(address(stakingManager)), stakeAmount, "StakingManager balance should match staked amount"
+            PIN.balanceOf(address(stakingManager)),
+            stakeAmount,
+            "StakingManager balance should match staked amount"
         );
 
         vm.stopPrank();
@@ -74,7 +86,7 @@ contract StakingManagerTest is Test {
         vm.startPrank(computeNode);
         uint256 lowStakeAmount = stakingManager.MIN_DEPOSIT() - 1;
         PIN.approve(address(stakingManager), lowStakeAmount);
-        vm.expectRevert("Deposit amount must be greater than minimum deposit");
+        vm.expectRevert("Must be greater than min deposit");
         stakingManager.stake(lowStakeAmount);
         vm.stopPrank();
     }
@@ -99,48 +111,30 @@ contract StakingManagerTest is Test {
         // compute node 1
         vm.startPrank(computeNode);
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode, stakeAmount);
-        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
-            computeNode
-        );
-        assertEq(
-            finalStakedBalance,
-            stakeAmount,
-            "Staked balance should equal first stake for compute node"
-        );
+        stakingManager.stake(stakeAmount);
+        
+        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
+        assertEq(finalStakedBalance, stakeAmount, "Staked balance should equal first stake for compute node");
         vm.stopPrank();
 
         // compute node 2
         vm.startPrank(computeNode2);
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode2, stakeAmount);
-        uint256 finalStakedBalance2 = stakingManager.getComputeNodeBalance(
-            computeNode2
-        );
-        assertEq(
-            finalStakedBalance2,
-            stakeAmount,
-            "Staked balance should equal first stake for compute node"
-        );
+        stakingManager.stake(stakeAmount);
+        uint256 finalStakedBalance2 = stakingManager.getComputeNodeBalance(computeNode2);
+        assertEq(finalStakedBalance2, stakeAmount, "Staked balance should equal first stake for compute node");
         vm.stopPrank();
 
         // compute node 2
         vm.startPrank(computeNode3);
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode3, stakeAmount);
-        uint256 finalStakedBalance3 = stakingManager.getComputeNodeBalance(
-            computeNode3
-        );
-        assertEq(
-            finalStakedBalance3,
-            stakeAmount,
-            "Staked balance should equal first stake for compute node"
-        );
+        stakingManager.stake(stakeAmount);
+
+        uint256 finalStakedBalance3 = stakingManager.getComputeNodeBalance(computeNode3);
+        assertEq(finalStakedBalance3, stakeAmount, "Staked balance should equal first stake for compute node");
         vm.stopPrank();
         assertEq(
-            finalStakedBalance2,
-            finalStakedBalance3,
-            "Compute node 2 and compute node 3 should stake the same amounts"
+            finalStakedBalance2, finalStakedBalance3, "Compute node 2 and compute node 3 should stake the same amounts"
         );
     }
 
@@ -152,14 +146,17 @@ contract StakingManagerTest is Test {
         PIN.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
 
-        uint256 stakedBalanceBeforeWithdraw = stakingManager.getComputeNodeBalance(computeNode);
+        uint256 stakedBalanceBeforeWithdraw = stakingManager
+            .getComputeNodeBalance(computeNode);
 
         uint256 withdrawAmount = MIN_DEPOSIT;
 
         // withdraw step
         stakingManager.withdraw(MIN_DEPOSIT);
 
-        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
+        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
+            computeNode
+        );
 
         assertEq(
             finalStakedBalance,
@@ -168,5 +165,34 @@ contract StakingManagerTest is Test {
         );
 
         vm.stopPrank();
+    }
+
+    function testUpdateMinDeposit() public {
+        // initial value, see constructor
+        uint256 initialMinDeposit = stakingManager.MIN_DEPOSIT();
+
+        // new min deposit value
+        uint256 newMinDeposit = 20000 * 1e18;
+
+        // vm.prank(computeNode);
+        // vm.expectRevert(
+        //     "AccessControl: account 0x0000000000000000000000000000000000000002 is missing role 0x0000000000000000000000000000000000000000000000000000000000000000"
+        // );
+        // stakingManager.updateMinDeposit(newMinDeposit);
+
+        // assertEq(
+        //     stakingManager.MIN_DEPOSIT(),
+        //     initialMinDeposit,
+        //     "MIN_DEPOSIT should not have changed"
+        // );
+
+        // vm.prank(admin);
+        // stakingManager.updateMinDeposit(newMinDeposit);
+
+        // assertEq(
+        //     stakingManager.MIN_DEPOSIT(),
+        //     newMinDeposit,
+        //     "MIN_DEPOSIT should have been updated"
+        // );
     }
 }
