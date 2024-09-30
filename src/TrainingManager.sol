@@ -30,7 +30,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     uint256 public trainingRunIdCount;
 
     event ComputeNodeAdded(address indexed account);
-    event EndTrainingRun(uint256 trainingRunId, uint256 endTime);
+    event TrainingRunEnded(uint256 trainingRunId, uint256 endTime);
     event AttestationSubmitted(
         address indexed computeNode,
         uint256 trainingRunId
@@ -72,7 +72,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /// @notice returns status of training run
     function getModelStatus(
         uint256 trainingRunId
-    ) external view override returns (ModelStatus) {
+    ) external view returns (ModelStatus) {
         return trainingRunData[trainingRunId].status;
     }
 
@@ -132,7 +132,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
             require(
                 runInfo.computeNodesArray[i] != account,
                 "Compute node already joined training run"
-            )
+            );
         }
         require(
             // checks the node's index is 0, default value
@@ -192,7 +192,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         );
         runInfo.status = ModelStatus.Done;
         runInfo.endTime = block.timestamp;
-        emit EndTrainingRun(trainingRunId, runInfo.endTime);
+        emit TrainingRunEnded(trainingRunId, runInfo.endTime);
         return true;
     }
 
