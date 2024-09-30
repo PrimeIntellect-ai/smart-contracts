@@ -90,25 +90,25 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// Balance associated to compute node address
 
     function stake(uint256 _amount) external nonReentrant {
-        // require(
-        //     trainingManager.isComputeNodeValid(msg.sender),
-        //     "Account not on Compute Node whitelist"
-        // );
-        // require(
-        //     _amount >= MIN_DEPOSIT,
-        //     "Deposit amount must be greater than minimum deposit"
-        // );
-        // ComputeBalancesInfo storage balances = computeNodeBalances[msg.sender];
+        require(
+            trainingManager.isComputeNodeValid(msg.sender),
+            "Account not on Compute Node whitelist"
+        );
+        require(
+            _amount >= MIN_DEPOSIT,
+            "Deposit amount must be greater than minimum deposit"
+        );
+        ComputeBalancesInfo storage balances = computeNodeBalances[msg.sender];
 
-        // require(
-        //     PIN.transferFrom(msg.sender, address(this), _amount),
-        //     "Transfer of PIN failed"
-        // );
+        require(
+            PIN.transferFrom(msg.sender, address(this), _amount),
+            "Transfer of PIN failed"
+        );
         PIN.transferFrom(msg.sender, address(this), _amount);
 
-        // balances.currentBalance = balances.currentBalance + _amount;
+        balances.currentBalance = balances.currentBalance + _amount;
 
-        // emit Staked(msg.sender, _amount);
+        emit Staked(msg.sender, _amount);
     }
 
     /// @notice Withdraw staked PIN from PrimeIntellectManager
