@@ -21,6 +21,10 @@ Compute nodes will be required to maintain a minimum amount of Prime Intellect t
 Compute nodes can be slashed for providing fake or faulty attestation.
 The Prime Intellect protocol can distribute PIN tokens to be claimed as rewards by compute providers.
 
+# System Diagram
+
+![systemDiagram](./documentation/systemDiagram.jpg)
+
 ## Usage
 
 ### Build
