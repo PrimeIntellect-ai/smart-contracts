@@ -88,29 +88,30 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// @notice when a user deposits, we will check that user against whitelist.
     /// Only whitelisted Compute Nodes can stake.
     /// Balance associated to compute node address
-    function stake(address account, uint256 _amount) external nonReentrant {
-        require(
-            address(trainingManager) != address(0),
-            "TrainingManager not set"
-        );
-        require(
-            trainingManager.isComputeNodeValid(account),
-            "Account not on Compute Node whitelist"
-        );
-        require(
-            _amount >= MIN_DEPOSIT,
-            "Deposit amount must be greater than minimum deposit"
-        );
-        ComputeBalancesInfo storage balances = computeNodeBalances[account];
+    function stake(uint256 _amount) external nonReentrant {
+        // require(
+        //     address(trainingManager) != address(0),
+        //     "TrainingManager not set"
+        // );
+        // require(
+        //     trainingManager.isComputeNodeValid(msg.sender),
+        //     "Account not on Compute Node whitelist"
+        // );
+        // require(
+        //     _amount >= MIN_DEPOSIT,
+        //     "Deposit amount must be greater than minimum deposit"
+        // );
+        // ComputeBalancesInfo storage balances = computeNodeBalances[msg.sender];
 
-        require(
-            PIN.transferFrom(msg.sender, address(this), _amount),
-            "Transfer of PIN failed"
-        );
+        // require(
+        //     PIN.transferFrom(msg.sender, address(this), _amount),
+        //     "Transfer of PIN failed"
+        // );
+        PIN.transferFrom(msg.sender, address(this), _amount);
 
-        balances.currentBalance = balances.currentBalance + _amount;
+        // balances.currentBalance = balances.currentBalance + _amount;
 
-        emit Staked(account, _amount);
+        // emit Staked(msg.sender, _amount);
     }
 
     /// @notice Withdraw staked PIN from PrimeIntellectManager
@@ -296,7 +297,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         return PIN.balanceOf(address(this));
     }
 
-    /// @notice Get the balance of PIN tokens held by compute node account
+    /// @notice Get the balance of PIN tokens staked by compute node account
     function getComputeNodeBalance(
         address account
     ) external view returns (uint256) {

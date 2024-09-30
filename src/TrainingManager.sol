@@ -56,7 +56,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
     ////           MODEL SETUP        ///
     /////////////////////////////////////
 
-    // todo: add require statement for duplication name/budget combination
     function registerModel(
         string memory _name,
         uint256 _budget
@@ -66,6 +65,11 @@ contract TrainingManager is ITrainingManager, AccessControl {
         newRun.status = ModelStatus.Registered;
         newRun.name = _name;
         newRun.budget = _budget;
+        return trainingRunIdCount;
+    }
+
+    /// @notice returns the name of the training run
+    function getLatestModelId() public view returns (uint256) {
         return trainingRunIdCount;
     }
 

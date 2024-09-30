@@ -49,7 +49,7 @@ contract TrainingManagerTest is Test {
             modelBudget
         );
 
-        console.log("New model registered with trainingRunId:", trainingRunId);
+        
 
         assertEq(
             trainingManager.name(trainingRunId),
@@ -94,8 +94,8 @@ contract TrainingManagerTest is Test {
 
         bool isValid = trainingManager.isComputeNodeValid(computeNode2);
 
-        console.log("Compute node address:", computeNode2);
-        console.log("Is compute node valid:", isValid);
+        
+        
 
         assertTrue(isValid, "Compute node should be valid after registration");
 
@@ -109,8 +109,8 @@ contract TrainingManagerTest is Test {
             (anotherComputeNode)
         );
 
-        console.log("Another compute node address:", anotherComputeNode);
-        console.log("Is another compute node valid:", isAnotherValid);
+        
+        
 
         assertTrue(
             isAnotherValid,
@@ -120,7 +120,7 @@ contract TrainingManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testJoinTrainingRun() public {
+    function test_JoinTrainingRun() public {
         string memory ipAddress = "192.168.1.1";
         uint256 stakeAmount = MIN_DEPOSIT + MIN_DEPOSIT;
 
@@ -136,17 +136,11 @@ contract TrainingManagerTest is Test {
         vm.stopPrank();
 
         vm.startPrank(computeNode);
-        console.log(
-            "Compute node balance before stake is:",
-            PIN.balanceOf(computeNode)
-        );
+        
 
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode, stakeAmount);
-        console.log(
-            "Compute node balance after stake is:",
-            PIN.balanceOf(computeNode)
-        );
+        stakingManager.stake(stakeAmount);
+        
 
         bool success = trainingManager.joinTrainingRun(
             computeNode,
@@ -163,14 +157,10 @@ contract TrainingManagerTest is Test {
             address[] memory computeNodes
         ) = trainingManager.getTrainingRunInfo(trainingRunId);
 
-        console.log("Training Run Info:");
-        console.log("Name:", name);
-        console.log("Budget:", budget);
-        console.log("Status:", uint(status));
-        console.log("Compute Nodes:");
-        for (uint i = 0; i < computeNodes.length; i++) {
-            console.log(computeNodes[i]);
-        }
+        uint256(status);
+
+        assertEq(name, modelName, "Name should match constructor");
+        assertEq(budget, modelBudget, "Budget should match constructor");
         assertEq(computeNodes.length, 1, "Should have one compute node");
         assertEq(
             computeNodes[0],
@@ -182,7 +172,7 @@ contract TrainingManagerTest is Test {
     }
 
     /// test to start a training run and submit attestations
-    function testStartAndSubmit() public {
+    function test_StartAndSubmit() public {
         string memory ipAddress1 = "192.168.1.1";
         uint256 stakeAmount = MIN_DEPOSIT;
 
@@ -198,26 +188,19 @@ contract TrainingManagerTest is Test {
 
         TrainingManager.ModelStatus status0 = trainingManager
             .getTrainingRunStatus(trainingRunId);
-        console.log("Training Run Status before start:", uint256(status0)); // log status as uint
 
         vm.stopPrank();
 
         vm.startPrank(computeNode);
         // join run
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode, stakeAmount);
+        stakingManager.stake(stakeAmount);
         trainingManager.joinTrainingRun(computeNode, ipAddress1, trainingRunId);
         vm.stopPrank();
 
         // start run
         vm.startPrank(admin);
         trainingManager.startTrainingRun(trainingRunId);
-        console.log("TrainingRunId is:", trainingRunId);
-
-        // Display status after starting training run
-        TrainingManager.ModelStatus status1 = trainingManager
-            .getTrainingRunStatus(trainingRunId);
-        console.log("Training Run Status after start:", uint256(status1)); // log status as uint 1
         vm.stopPrank();
 
         // submit attestations
@@ -233,7 +216,6 @@ contract TrainingManagerTest is Test {
             trainingRunId,
             computeNode
         );
-        console.log("Number of attestations submitted:", attestationCount);
 
         assertEq(attestationCount, 1);
         vm.stopPrank();

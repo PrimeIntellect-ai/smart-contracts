@@ -7,6 +7,10 @@ import "../src/StakingManager.sol";
 import "../src/PrimeIntellectToken.sol";
 import "../src/TrainingManager.sol";
 
+/////////////////////////////////////////
+////         e2e rewards test         ///
+/////////////////////////////////////////
+
 contract StakingManagerTest is Test {
     StakingManager public stakingManager;
     TrainingManager public trainingManager;
@@ -36,9 +40,7 @@ contract StakingManagerTest is Test {
         PIN.approve(computeNode, INITIAL_SUPPLY);
         PIN.mint(computeNode, INITIAL_SUPPLY);
         trainingManager.addComputeNode(computeNode);
-        vm.stopPrank();
-
-        console.log("MIN_DEPOSIT:", stakingManager.MIN_DEPOSIT());
+        vm.stopPrank(); 
     }
 
     /// @notice helper function used in succeeding test cases
@@ -100,13 +102,13 @@ contract StakingManagerTest is Test {
     function testClaimMultipleRuns() public {
         uint256 stakeAmount = stakingManager.MIN_DEPOSIT() +
             stakingManager.MIN_DEPOSIT();
-        console.log("Stake amount:", stakeAmount);
+        
 
         // staking
         vm.startPrank(computeNode);
         PIN.approve(address(stakingManager), stakeAmount);
-        console.log("Staking pin tokens");
-        stakingManager.stake(computeNode, stakeAmount);
+        
+        stakingManager.stake(stakeAmount);
         vm.stopPrank();
 
         // create mock training runs using function above
@@ -122,7 +124,7 @@ contract StakingManagerTest is Test {
         uint256 initialBalance = PIN.balanceOf(computeNode);
 
         vm.prank(computeNode);
-        console.log("Claiming rewards");
+        
         stakingManager.claim();
 
         uint256 expectedRewards = 23 * REWARD_RATE; // 10 + 5 + 8
