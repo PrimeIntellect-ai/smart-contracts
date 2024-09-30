@@ -12,6 +12,7 @@ from web3 import Web3
 
 anvil_url = "http://127.0.0.1:8545"
 web3 = Web3(Web3.HTTPProvider(anvil_url))
+web3.eth.handleRevert = True
 
 if web3.is_connected():
     print("Connected to Anvil")
@@ -75,7 +76,8 @@ admin_private_key = os.getenv('MODEL_TRAINER_WALLET_PRIVATE_KEY')
 chain_id = web3.eth.chain_id
 
 nonce = web3.eth.get_transaction_count(admin_public_key)
-call_function = token_contract.functions.grantAdminRole(
+call_function = token_contract.functions.grantRole(
+    token_contract.functions.getMinterRole.call(),
     staking_contract_address
 ).build_transaction({
     "chainId": chain_id,
@@ -192,19 +194,8 @@ for (index, (public_key, private_key)) in enumerate(compute_nodes):
     web3.eth.wait_for_transaction_receipt(send_tx)
 
     nonce = web3.eth.get_transaction_count(public_key)
-    call_function = staking_contract.functions.stake(
-        public_key,
-        minStake
-    ).build_transaction({
-        "chainId": chain_id,
-        "from": public_key,
-        "nonce": nonce,
-        "gas": 100000
-    })
-    signed_tx = web3.eth.account.sign_transaction(
-        call_function,
-        private_key=private_key
-    )
+    call_function = staking_contract.functions.stake(MIN_DEPOSIT).build_transaction({"chainId": chain_id,"from": public_key,"nonce": nonce,"gas": 100000})
+    signed_tx = web3.eth.account.sign_transaction(call_function,private_key=private_key)
     send_tx = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
     response = web3.eth.wait_for_transaction_receipt(send_tx)
     print("Compute node #{} staked {} $PIN".format(index + 1, int(MIN_DEPOSIT / 1e18)))
@@ -236,7 +227,6 @@ print("Registered model with training run id #{}".format(trainingRunId))
 
 for (index, (public_key, private_key)) in enumerate(compute_nodes):
     try:
-        # ???
         public_key = Web3.to_checksum_address(public_key)
         nonce = web3.eth.get_transaction_count(admin_public_key)
         call_function = training_contract.functions.joinTrainingRun(
@@ -276,7 +266,6 @@ web3.eth.wait_for_transaction_receipt(send_tx)
 
 for (index, (public_key, private_key)) in enumerate(compute_nodes):
     try:
-        # ???
         public_key = Web3.to_checksum_address(public_key)
         nonce = web3.eth.get_transaction_count(admin_public_key)
         call_function = training_contract.functions.submitAttestation(

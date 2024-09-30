@@ -108,7 +108,7 @@ contract StakingManagerTest is Test {
         vm.startPrank(computeNode);
         PIN.approve(address(stakingManager), stakeAmount);
         
-        stakingManager.stake(computeNode, stakeAmount);
+        stakingManager.stake(stakeAmount);
         vm.stopPrank();
 
         // create mock training runs using function above

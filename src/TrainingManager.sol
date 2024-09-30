@@ -56,7 +56,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
     ////           MODEL SETUP        ///
     /////////////////////////////////////
 
-    // todo: add require statement for duplication name/budget combination
     function registerModel(
         string memory _name,
         uint256 _budget

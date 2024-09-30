@@ -58,7 +58,7 @@ contract StakingManagerTest is Test {
 
         PIN.approve(address(stakingManager), stakeAmount);
 
-        stakingManager.stake(computeNode, stakeAmount);
+        stakingManager.stake(stakeAmount);
 
         uint256 finalPINBalance = PIN.balanceOf(computeNode);
         uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
@@ -95,13 +95,8 @@ contract StakingManagerTest is Test {
         uint256 lowStakeAmount = stakingManager.MIN_DEPOSIT() - 1;
         PIN.approve(address(stakingManager), lowStakeAmount);
         vm.expectRevert("Deposit amount must be greater than minimum deposit");
-        stakingManager.stake(computeNode, lowStakeAmount);
-        vm.stopPrank();
-
-        
-        
-        
-        
+        stakingManager.stake(lowStakeAmount);
+        vm.stopPrank();  
         
     }
 
@@ -111,7 +106,7 @@ contract StakingManagerTest is Test {
         vm.startPrank(computeNode);
 
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode, stakeAmount);
+        stakingManager.stake(stakeAmount);
 
         uint256 stakedBalanceBeforeWithdraw = stakingManager
             .getComputeNodeBalance(computeNode);
@@ -130,10 +125,6 @@ contract StakingManagerTest is Test {
             stakedBalanceBeforeWithdraw - withdrawAmount,
             "PIN balance should decrease by withdraw amount"
         );
-
-        
-        
-        
 
         vm.stopPrank();
     }

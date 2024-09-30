@@ -120,7 +120,7 @@ contract TrainingManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testJoinTrainingRun() public {
+    function test_JoinTrainingRun() public {
         string memory ipAddress = "192.168.1.1";
         uint256 stakeAmount = MIN_DEPOSIT + MIN_DEPOSIT;
 
@@ -139,7 +139,7 @@ contract TrainingManagerTest is Test {
         
 
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode, stakeAmount);
+        stakingManager.stake(stakeAmount);
         
 
         bool success = trainingManager.joinTrainingRun(
@@ -172,7 +172,7 @@ contract TrainingManagerTest is Test {
     }
 
     /// test to start a training run and submit attestations
-    function testStartAndSubmit() public {
+    function test_StartAndSubmit() public {
         string memory ipAddress1 = "192.168.1.1";
         uint256 stakeAmount = MIN_DEPOSIT;
 
@@ -188,26 +188,19 @@ contract TrainingManagerTest is Test {
 
         TrainingManager.ModelStatus status0 = trainingManager
             .getTrainingRunStatus(trainingRunId);
-        console.log("Training Run Status before start:", uint256(status0)); // log status as uint
 
         vm.stopPrank();
 
         vm.startPrank(computeNode);
         // join run
         PIN.approve(address(stakingManager), stakeAmount);
-        stakingManager.stake(computeNode, stakeAmount);
+        stakingManager.stake(stakeAmount);
         trainingManager.joinTrainingRun(computeNode, ipAddress1, trainingRunId);
         vm.stopPrank();
 
         // start run
         vm.startPrank(admin);
         trainingManager.startTrainingRun(trainingRunId);
-        console.log("TrainingRunId is:", trainingRunId);
-
-        // Display status after starting training run
-        TrainingManager.ModelStatus status1 = trainingManager
-            .getTrainingRunStatus(trainingRunId);
-        console.log("Training Run Status after start:", uint256(status1)); // log status as uint 1
         vm.stopPrank();
 
         // submit attestations
@@ -223,7 +216,6 @@ contract TrainingManagerTest is Test {
             trainingRunId,
             computeNode
         );
-        console.log("Number of attestations submitted:", attestationCount);
 
         assertEq(attestationCount, 1);
         vm.stopPrank();
