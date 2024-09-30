@@ -24,8 +24,12 @@ contract TrainingManager is ITrainingManager, AccessControl {
     }
 
     mapping(uint256 => TrainingRunInfo) public trainingRunData;
+
+    // compute node whitelist
     mapping(address => bool) public registeredValidComputeNodes;
-    mapping(address => string) public registeredComputeNodes;
+
+    // mapping to check for duplicate model registrations
+    mapping(bytes32 => bool) public registeredModelHashes;
 
     uint256 public trainingRunIdCount;
 
@@ -56,11 +60,13 @@ contract TrainingManager is ITrainingManager, AccessControl {
     ////           MODEL SETUP        ///
     /////////////////////////////////////
 
-    // todo: add require statement for duplication name/budget combination
     function registerModel(
         string memory _name,
         uint256 _budget
     ) external override returns (uint256) {
+        bytes32 modelHash = keccak256(abi.encodePacked(_name, _budget));
+        require(!registeredModelHashes[modelHash], "Model already registered");
+
         trainingRunIdCount++;
         TrainingRunInfo storage newRun = trainingRunData[trainingRunIdCount];
         newRun.status = ModelStatus.Registered;
