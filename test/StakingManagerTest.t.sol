@@ -57,8 +57,6 @@ contract StakingManagerTest is Test {
             computeNode
         );
 
-        PIN.approve(address(stakingManager), stakeAmount);
-
         stakingManager.stake(computeNode, stakeAmount);
 
         uint256 finalPINBalance = PIN.balanceOf(computeNode);
@@ -104,6 +102,71 @@ contract StakingManagerTest is Test {
         console.log("Staked amount:", stakeAmount);
         console.log("Final PIN balance:", finalPINBalance);
         console.log("Final staked balance:", finalStakedBalance);
+    }
+
+    function testMultipleStakes() public {
+        uint256 stakeAmount = MIN_DEPOSIT + MIN_DEPOSIT;
+
+        address computeNode2 = address(3);
+        address computeNode3 = address(4);
+        address computeNode4 = address(5);
+
+        vm.startPrank(admin);
+        PIN.mint(computeNode2, INITIAL_SUPPLY);
+        PIN.mint(computeNode3, INITIAL_SUPPLY);
+        PIN.mint(computeNode4, INITIAL_SUPPLY);
+
+        trainingManager.addComputeNode(computeNode2);
+        trainingManager.addComputeNode(computeNode3);
+        trainingManager.addComputeNode(computeNode4);
+        vm.stopPrank();
+
+        // compute node 1
+        vm.startPrank(computeNode);
+        PIN.approve(address(stakingManager), stakeAmount);
+        stakingManager.stake(computeNode, stakeAmount);
+        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
+            computeNode
+        );
+        assertEq(
+            finalStakedBalance,
+            stakeAmount,
+            "Staked balance should equal first stake for compute node"
+        );
+        vm.stopPrank();
+
+        // compute node 2
+        vm.startPrank(computeNode2);
+        PIN.approve(address(stakingManager), stakeAmount);
+        stakingManager.stake(computeNode2, stakeAmount);
+        uint256 finalStakedBalance2 = stakingManager.getComputeNodeBalance(
+            computeNode2
+        );
+        assertEq(
+            finalStakedBalance2,
+            stakeAmount,
+            "Staked balance should equal first stake for compute node"
+        );
+        vm.stopPrank();
+
+        // compute node 2
+        vm.startPrank(computeNode3);
+        PIN.approve(address(stakingManager), stakeAmount);
+        stakingManager.stake(computeNode3, stakeAmount);
+        uint256 finalStakedBalance3 = stakingManager.getComputeNodeBalance(
+            computeNode3
+        );
+        assertEq(
+            finalStakedBalance3,
+            stakeAmount,
+            "Staked balance should equal first stake for compute node"
+        );
+        vm.stopPrank();
+        assertEq(
+            finalStakedBalance2,
+            finalStakedBalance3,
+            "Compute node 2 and compute node 3 should stake the same amounts"
+        );
     }
 
     function test_withdraw() public {

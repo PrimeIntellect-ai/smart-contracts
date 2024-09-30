@@ -90,10 +90,6 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// Balance associated to compute node address
     function stake(address account, uint256 _amount) external nonReentrant {
         require(
-            address(trainingManager) != address(0),
-            "TrainingManager not set"
-        );
-        require(
             trainingManager.isComputeNodeValid(account),
             "Account not on Compute Node whitelist"
         );
@@ -104,7 +100,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         ComputeBalancesInfo storage balances = computeNodeBalances[account];
 
         require(
-            PIN.transferFrom(msg.sender, address(this), _amount),
+            PIN.transferFrom(account, address(this), _amount),
             "Transfer of PIN failed"
         );
 

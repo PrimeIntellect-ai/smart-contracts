@@ -72,7 +72,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /// @notice returns status of training run
     function getModelStatus(
         uint256 trainingRunId
-    ) external view override returns (ModelStatus) {
+    ) external view returns (ModelStatus) {
         return trainingRunData[trainingRunId].status;
     }
 
@@ -132,7 +132,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
             require(
                 runInfo.computeNodesArray[i] != account,
                 "Compute node already joined training run"
-            )
+            );
         }
         require(
             // checks the node's index is 0, default value
