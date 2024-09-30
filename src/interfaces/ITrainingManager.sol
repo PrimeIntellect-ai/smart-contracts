@@ -18,9 +18,9 @@ interface ITrainingManager {
     function budget(uint256 trainingRunId) external view returns (uint256);
 
     /// @notice Gets status of training run for id
-    function getTrainingRunStatus(
+    function getModelStatus(
         uint256 trainingRunId
-    ) external returns (ModelStatus);
+    ) external view returns (ModelStatus);
 
     function joinTrainingRun(
         address account,
