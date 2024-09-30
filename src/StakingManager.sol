@@ -44,7 +44,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     mapping(uint256 => Challenge) public challenges;
 
     event Staked(address indexed account, uint256 amount);
-    event Withdrawn(address indexed account, uint256 amount);
+    event Withdrew(address indexed account, uint256 amount);
     event ChallengeSubmitted(
         uint256 indexed challengeId,
         uint256 indexed trainingRunId,
@@ -115,7 +115,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
 
         require(PIN.transfer(msg.sender, _amount), "Transfer failed");
 
-        emit Withdrawn(msg.sender, _amount);
+        emit Withdrew(msg.sender, _amount);
     }
 
     /// @notice challenges posted for a specific training hash (compute provider & training run Id)
