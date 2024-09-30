@@ -5,7 +5,8 @@ import "forge-std/Test.sol";
 import "../src/StakingManager.sol";
 import "../src/PrimeIntellectToken.sol";
 import "../src/TrainingManager.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "../src/interfaces/IStakingManager.sol";
+import "../src/interfaces/ITrainingManager.sol";
 
 /// @notice Test to illustrate end to end process for a training run.
 
@@ -14,28 +15,60 @@ contract EndToEndTest is Test {
     TrainingManager public trainingManager;
     PrimeIntellectToken public PIN;
 
+    // create our users
     address public admin = address(1);
     address public computeNode = address(2);
     address public computeNode2 = address(3);
     address public computeNode3 = address(4);
 
     uint256 public constant INITIAL_SUPPLY = 1000000 * 1e18;
-    uint256 public constant MIN_DEPOSIT = 10000 * 1e18;
 
     function setUp() public {
         vm.startPrank(admin);
 
+        // deploy token contract
         PIN = new PrimeIntellectToken("Prime Intellect Token", "PIN");
+        // deploy training manager
         trainingManager = new TrainingManager();
-        stakingManager = new StakingManager(address(PIN), address(trainingManager));
+        // deploy staking manager
+        stakingManager = new StakingManager(
+            address(PIN),
+            address(trainingManager)
+        );
 
+        // inform training manager of staking manager's deployed address
+        // this allows us to avoid circular dependency during deployment process
         trainingManager.setStakingManager(address(stakingManager));
 
+        // issue tokens to our compute nodes
+        // admin has minter role by default
         PIN.mint(computeNode, INITIAL_SUPPLY);
-        trainingManager.addComputeNode(computeNode);
+        PIN.mint(computeNode2, INITIAL_SUPPLY);
+        PIN.mint(computeNode3, INITIAL_SUPPLY);
         vm.stopPrank();
     }
 
     /// One run with multiple compute nodes earning rewards
-    function E2ETestBaseCase() public {}
+    function testE2EBaseCase() public {
+        vm.startPrank(admin);
+        uint256 minStake = stakingManager.MIN_DEPOSIT();
+
+        // add our compute nodes to whitelist
+        trainingManager.addComputeNode(computeNode);
+        trainingManager.addComputeNode(computeNode2);
+        trainingManager.addComputeNode(computeNode3);
+        vm.stopPrank();
+
+        // first compute node stakes
+        vm.startPrank(computeNode);
+        PIN.approve(address(stakingManager), minStake);
+        stakingManager.stake(minStake);
+
+        assertEq(
+            minStake,
+            stakingManager.getComputeNodeBalance(computeNode),
+            "INITAL_SUPPLY less staked amount equals balance"
+        );
+        vm.stopPrank();
+    }
 }

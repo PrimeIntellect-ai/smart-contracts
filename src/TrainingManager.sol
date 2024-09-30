@@ -42,8 +42,13 @@ contract TrainingManager is ITrainingManager, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function setStakingManager(address _stakingManagerAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(_stakingManagerAddress != address(0), "Invalid StakingManager address");
+    function setStakingManager(
+        address _stakingManagerAddress
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(
+            _stakingManagerAddress != address(0),
+            "Invalid StakingManager address"
+        );
         stakingManager = StakingManager(_stakingManagerAddress);
         emit StakingManagerSet(_stakingManagerAddress);
     }
@@ -51,6 +56,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     //////////////////////////////////////
     ////           MODEL SETUP        ///
     /////////////////////////////////////
+
 
     function registerModel(string memory _name, uint256 _budget) external override returns (uint256) {
         bytes32 modelHash = keccak256(abi.encodePacked(_name, _budget));
@@ -73,23 +79,31 @@ contract TrainingManager is ITrainingManager, AccessControl {
     }
 
     /// @notice returns status of training run
-    function getModelStatus(uint256 trainingRunId) external view returns (ModelStatus) {
+    function getModelStatus(
+        uint256 trainingRunId
+    ) external view returns (ModelStatus) {
         return trainingRunData[trainingRunId].status;
     }
 
     /// @notice returns the name of the training run
-    function name(uint256 trainingRunId) public view override returns (string memory) {
+    function name(
+        uint256 trainingRunId
+    ) public view override returns (string memory) {
         return trainingRunData[trainingRunId].name;
     }
 
     /// @notice Returns the budget for the training run
-    function budget(uint256 trainingRunId) public view override returns (uint256) {
+    function budget(
+        uint256 trainingRunId
+    ) public view override returns (uint256) {
         return trainingRunData[trainingRunId].budget;
     }
 
     /// @notice returns status for the model regarding the training run
     /// @dev Model statuses are defined in ITrainingManager.sol
-    function getTrainingRunStatus(uint256 trainingRunId) external view returns (ModelStatus) {
+    function getTrainingRunStatus(
+        uint256 trainingRunId
+    ) external view returns (ModelStatus) {
         return trainingRunData[trainingRunId].status;
     }
 
@@ -101,28 +115,43 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /// @param account wallet address of compute node
     /// @param ipAddress ip address that will be associated with compute attestations
     /// @param trainingRunId the id for the training run
-    function joinTrainingRun(address account, string memory ipAddress, uint256 trainingRunId) external returns (bool) {
-        require(address(stakingManager) != address(0), "StakingManager not set");
+    function joinTrainingRun(
+        address account,
+        string memory ipAddress,
+        uint256 trainingRunId
+    ) external returns (bool) {
         require(
-            stakingManager.getComputeNodeBalance(account) >= stakingManager.MIN_DEPOSIT(), "Insufficient staked balance"
+            address(stakingManager) != address(0),
+            "StakingManager not set"
+        );
+        require(
+            stakingManager.getComputeNodeBalance(account) >=
+                stakingManager.MIN_DEPOSIT(),
+            "Insufficient staked balance"
         );
         require(bytes(ipAddress).length > 0, "IP address cannot be empty");
 
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
-        require(runInfo.status == ModelStatus.Registered, "Invalid training run status");
+        require(
+            runInfo.status == ModelStatus.Registered,
+            "Invalid training run status"
+        );
 
         for (uint256 i = 0; i < runInfo.computeNodesArray.length; i++) {
             require(runInfo.computeNodesArray[i] != account, "Compute node already joined training run");
         }
         require(
             // checks the node's index is 0, default value
-            runInfo.computeNodes[account].index == 0
-                && (runInfo.computeNodesArray.length == 0 || runInfo.computeNodesArray[0] != account),
+            runInfo.computeNodes[account].index == 0 &&
+                (runInfo.computeNodesArray.length == 0 ||
+                    runInfo.computeNodesArray[0] != account),
             "Compute node already in training run"
         );
 
         runInfo.computeNodesArray.push(account);
-        runInfo.computeNodes[account].index = runInfo.computeNodesArray.length - 1;
+        runInfo.computeNodes[account].index =
+            runInfo.computeNodesArray.length -
+            1;
 
         registeredValidComputeNodes[account] = true;
         return true;
@@ -131,7 +160,10 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /// @dev Adds compute node to whitelist of valid compute nodes
     function addComputeNode(address account) external {
         require(account != address(0), "Invalid node address");
-        require(!registeredValidComputeNodes[account], "Compute node already registered");
+        require(
+            !registeredValidComputeNodes[account],
+            "Compute node already registered"
+        );
         registeredValidComputeNodes[account] = true;
 
         emit ComputeNodeAdded(account);
@@ -172,10 +204,16 @@ contract TrainingManager is ITrainingManager, AccessControl {
         returns (bool)
     {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
-        require(runInfo.status == ModelStatus.Running, "Training run is not active");
+        require(
+            runInfo.status == ModelStatus.Running,
+            "Training run is not active"
+        );
 
         ComputeNodeInfo storage nodeInfo = runInfo.computeNodes[account];
-        require(nodeInfo.index < runInfo.computeNodesArray.length, "Compute node not part of this training run");
+        require(
+            nodeInfo.index < runInfo.computeNodesArray.length,
+            "Compute node not part of this training run"
+        );
 
         nodeInfo.attestations.push(attestation);
         stakingManager.recordAttestation(account, trainingRunId);
@@ -184,13 +222,25 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return true;
     }
 
-    function getAttestations(uint256 trainingRunId, address account) external view returns (uint256) {
+    /// @notice Gets count of attestations for given training run and compute node
+    /// Retrieves struct for training run info, checks run status and compute whitelist
+    /// Embedded in TrainingRunInfo is ComputeNodeInfo, stores attestations for node in that run
+    function getAttestationsCount(
+        uint256 trainingRunId,
+        address account
+    ) external view override returns (uint256) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
-        require(runInfo.status != ModelStatus.Registered, "Training run not started");
+        require(
+            runInfo.status != ModelStatus.Registered,
+            "Training run not started"
+        );
         require(registeredValidComputeNodes[account], "Invalid compute node");
 
         ComputeNodeInfo storage nodeInfo = runInfo.computeNodes[account];
-        require(nodeInfo.index < runInfo.computeNodesArray.length, "Compute node not part of run");
+        require(
+            nodeInfo.index < runInfo.computeNodesArray.length,
+            "Compute node not part of run"
+        );
 
         return nodeInfo.attestations.length;
     }
@@ -200,7 +250,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return trainingRunData[trainingRunId].computeNodesArray;
     }
 
-    /// @dev Returns attestations of a compute node
+    /// @dev Returns attestations array for given training run and compute node
     function getAttestationsForComputeNode(uint256 trainingRunId, address account)
         external
         view
@@ -208,7 +258,10 @@ contract TrainingManager is ITrainingManager, AccessControl {
     {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         ComputeNodeInfo storage nodeInfo = runInfo.computeNodes[account];
-        require(nodeInfo.index < runInfo.computeNodesArray.length, "Compute node not part of this training run");
+        require(
+            nodeInfo.index < runInfo.computeNodesArray.length,
+            "Compute node not part of this training run"
+        );
 
         return nodeInfo.attestations;
     }
@@ -217,16 +270,29 @@ contract TrainingManager is ITrainingManager, AccessControl {
     function getTrainingRunInfo(uint256 trainingRunId)
         external
         view
-        returns (string memory _name, uint256 _budget, ModelStatus status, address[] memory computeNodes)
+        returns (
+            string memory _name,
+            uint256 _budget,
+            ModelStatus status,
+            address[] memory computeNodes
+        )
     {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
-        return (runInfo.name, runInfo.budget, runInfo.status, runInfo.computeNodesArray);
+        return (
+            runInfo.name,
+            runInfo.budget,
+            runInfo.status,
+            runInfo.computeNodesArray
+        );
     }
 
     /// @dev Returns end time assuming that a run has in fact completed
     function getTrainingRunEndTime(uint256 trainingRunId) external view override returns (uint256) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
-        require(runInfo.status == ModelStatus.Done, "Training run has not ended");
+        require(
+            runInfo.status == ModelStatus.Done,
+            "Training run has not ended"
+        );
         return runInfo.endTime;
     }
 }

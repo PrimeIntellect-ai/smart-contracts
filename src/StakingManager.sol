@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./PrimeIntellectToken.sol";
 import "./TrainingManager.sol";
+import "./interfaces/IStakingManager.sol";
 
 contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
@@ -80,14 +81,16 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// Only whitelisted Compute Nodes can stake.
     /// Balance associated to compute node address
     function stake(uint256 _amount) external nonReentrant {
-        require(address(trainingManager) != address(0), "TrainingManager not set");
-        require(trainingManager.isComputeNodeValid(msg.sender), "Account not on Compute Node whitelist");
-        require(_amount >= MIN_DEPOSIT, "Deposit amount must be greater than minimum deposit");
-
+        require(
+            trainingManager.isComputeNodeValid(msg.sender),
+            "Not on Compute Node whitelist"
+        );
+        require(_amount >= MIN_DEPOSIT, "Must be greater than min deposit");
         ComputeBalancesInfo storage balances = computeNodeBalances[msg.sender];
 
-        require(PIN.transferFrom(msg.sender, address(this), _amount), "Transfer of PIN failed");
-
+        // transfer PIN tokens to staking manager
+        PIN.transferFrom(msg.sender, address(this), _amount);
+        // increment PIN balance for compute node
         balances.currentBalance = balances.currentBalance + _amount;
 
         emit Staked(msg.sender, _amount);
@@ -109,36 +112,55 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// @notice challenges posted for a specific training hash (compute provider & training run Id)
     /// Challenge is for notification purposes only at the moment.
     /// returns challengeId
-    function challenge(uint256 trainingRunId, address computeNode) external whenNotPaused returns (uint256) {
+    function challenge(
+        uint256 _trainingRunId,
+        address _computeNode
+    ) external whenNotPaused returns (uint256) {
         require(
-            trainingManager.getModelStatus(trainingRunId) == ITrainingManager.ModelStatus.Done,
+            trainingManager.getModelStatus(_trainingRunId) ==
+                ITrainingManager.ModelStatus.Done,
             "Training run has not finished"
         );
         require(
-            block.timestamp <= trainingManager.getTrainingRunEndTime(trainingRunId) + 7 days,
+            block.timestamp <=
+                trainingManager.getTrainingRunEndTime(_trainingRunId) + 7 days,
             "Challenge period has expired"
         );
 
-        uint256 challengeId = uint256(keccak256(abi.encodePacked(trainingRunId, computeNode, block.timestamp)));
-        challenges[challengeId] = Challenge({trainingRunId: trainingRunId, challenger: msg.sender, resolved: false});
+        uint256 challengeId = uint256(
+            keccak256(
+                abi.encodePacked(_trainingRunId, _computeNode, block.timestamp)
+            )
+        );
+        challenges[challengeId] = Challenge({
+            trainingRunId: _trainingRunId,
+            challenger: msg.sender,
+            resolved: false
+        });
 
-        emit ChallengeSubmitted(challengeId, trainingRunId, msg.sender);
+        emit ChallengeSubmitted(challengeId, _trainingRunId, msg.sender);
         return challengeId;
     }
 
     /// @notice slash is called by Prime Intellect admin.
     /// Slash amount is discretionary.
     /// sends staked PIN to 0x address (burn).
-    function slash(address account, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
-        ComputeBalancesInfo storage balances = computeNodeBalances[account];
+    function slash(
+        address _account,
+        uint256 _amount
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        ComputeBalancesInfo storage balances = computeNodeBalances[_account];
         uint256 totalBalance = balances.currentBalance;
 
-        require(totalBalance >= amount, "Slash amount exceeds total staked balance");
+        require(
+            totalBalance >= _amount,
+            "Slash amount exceeds total staked balance"
+        );
 
-        balances.currentBalance -= amount;
-        PIN.burn(account, amount);
+        balances.currentBalance -= _amount;
+        PIN.burn(_account, _amount);
 
-        emit Slashed(account, amount);
+        emit Slashed(_account, _amount);
     }
 
     /////////////////////////////////////////
