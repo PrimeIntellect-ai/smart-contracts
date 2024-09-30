@@ -24,26 +24,18 @@ contract StakingManagerTest is Test {
 
         PIN = new PrimeIntellectToken("Prime-Intellect-Token", "PIN");
         trainingManager = new TrainingManager();
-        stakingManager = new StakingManager(
-            address(PIN),
-            address(trainingManager)
-        );
-        
+        stakingManager = new StakingManager(address(PIN), address(trainingManager));
 
         PIN.grantRole(PIN.MINTER_ROLE(), address(stakingManager));
 
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
-        
 
         PIN.mint(computeNode, INITIAL_SUPPLY);
-        
 
         trainingManager.addComputeNode(computeNode);
-        
 
         vm.stopPrank();
-        
     }
 
     function test_stake() public {
@@ -52,41 +44,26 @@ contract StakingManagerTest is Test {
         vm.startPrank(computeNode);
 
         uint256 initialPINBalance = PIN.balanceOf(computeNode);
-        uint256 initialStakedBalance = stakingManager.getComputeNodeBalance(
-            computeNode
-        );
+        uint256 initialStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
 
         PIN.approve(address(stakingManager), stakeAmount);
 
         stakingManager.stake(stakeAmount);
 
         uint256 finalPINBalance = PIN.balanceOf(computeNode);
-        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
-            computeNode
-        );
+        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
 
-        assertEq(
-            finalPINBalance,
-            initialPINBalance - stakeAmount,
-            "PIN balance should decrease by staked amount"
-        );
+        assertEq(finalPINBalance, initialPINBalance - stakeAmount, "PIN balance should decrease by staked amount");
 
         // check if the staked balance increased by staked amount
         assertEq(
-            finalStakedBalance,
-            initialStakedBalance + stakeAmount,
-            "Staked balance should increase by staked amount"
+            finalStakedBalance, initialStakedBalance + stakeAmount, "Staked balance should increase by staked amount"
         );
 
-        assertTrue(
-            stakeAmount > stakingManager.MIN_DEPOSIT(),
-            "Staked amount should be greater than minimum deposit"
-        );
+        assertTrue(stakeAmount > stakingManager.MIN_DEPOSIT(), "Staked amount should be greater than minimum deposit");
 
         assertEq(
-            PIN.balanceOf(address(stakingManager)),
-            stakeAmount,
-            "StakingManager balance should match staked amount"
+            PIN.balanceOf(address(stakingManager)), stakeAmount, "StakingManager balance should match staked amount"
         );
 
         vm.stopPrank();
@@ -96,8 +73,7 @@ contract StakingManagerTest is Test {
         PIN.approve(address(stakingManager), lowStakeAmount);
         vm.expectRevert("Deposit amount must be greater than minimum deposit");
         stakingManager.stake(lowStakeAmount);
-        vm.stopPrank();  
-        
+        vm.stopPrank();
     }
 
     function test_withdraw() public {
@@ -108,17 +84,14 @@ contract StakingManagerTest is Test {
         PIN.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
 
-        uint256 stakedBalanceBeforeWithdraw = stakingManager
-            .getComputeNodeBalance(computeNode);
+        uint256 stakedBalanceBeforeWithdraw = stakingManager.getComputeNodeBalance(computeNode);
 
         uint256 withdrawAmount = MIN_DEPOSIT;
 
         // withdraw step
         stakingManager.withdraw(MIN_DEPOSIT);
 
-        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
-            computeNode
-        );
+        uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(computeNode);
 
         assertEq(
             finalStakedBalance,

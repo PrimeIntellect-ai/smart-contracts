@@ -44,21 +44,14 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
 
     event Staked(address indexed account, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
-    event ChallengeSubmitted(
-        uint256 indexed challengeId,
-        uint256 indexed trainingRunId,
-        address indexed challenger
-    );
+    event ChallengeSubmitted(uint256 indexed challengeId, uint256 indexed trainingRunId, address indexed challenger);
     event Slashed(address indexed account, uint256 amount);
     event RewardsClaimed(address indexed account, uint256 amount);
     event AttestationRecorded(address indexed account, uint256 trainingRunId);
 
     constructor(address _pinTokenAddress, address _trainingManagerAddress) {
         PIN = PrimeIntellectToken(_pinTokenAddress);
-        require(
-            _trainingManagerAddress != address(0),
-            "Invalid TrainingManager address"
-        );
+        require(_trainingManagerAddress != address(0), "Invalid TrainingManager address");
         trainingManager = TrainingManager(_trainingManagerAddress);
         MIN_DEPOSIT = 10000 * 10 ** 18; // 10,000 PIN token (assuming 18 decimals)
     }
@@ -67,9 +60,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     ////           ADMIN FUNCTIONS        ///
     /////////////////////////////////////////
 
-    function updateMinDeposit(
-        uint256 _minDeposit
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateMinDeposit(uint256 _minDeposit) public onlyRole(DEFAULT_ADMIN_ROLE) {
         MIN_DEPOSIT = _minDeposit;
     }
 
@@ -129,31 +120,18 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice challenges posted for a specific training hash (compute provider & training run Id)
     /// returns challengeId
-    function challenge(
-        uint256 trainingRunId,
-        address computeNode
-    ) external whenNotPaused returns (uint256) {
+    function challenge(uint256 trainingRunId, address computeNode) external whenNotPaused returns (uint256) {
         require(
-            trainingManager.getModelStatus(trainingRunId) ==
-                ITrainingManager.ModelStatus.Done,
+            trainingManager.getModelStatus(trainingRunId) == ITrainingManager.ModelStatus.Done,
             "Training run has not finished"
         );
         require(
-            block.timestamp <=
-                trainingManager.getTrainingRunEndTime(trainingRunId) + 7 days,
+            block.timestamp <= trainingManager.getTrainingRunEndTime(trainingRunId) + 7 days,
             "Challenge period has expired"
         );
 
-        uint256 challengeId = uint256(
-            keccak256(
-                abi.encodePacked(trainingRunId, computeNode, block.timestamp)
-            )
-        );
-        challenges[challengeId] = Challenge({
-            trainingRunId: trainingRunId,
-            challenger: msg.sender,
-            resolved: false
-        });
+        uint256 challengeId = uint256(keccak256(abi.encodePacked(trainingRunId, computeNode, block.timestamp)));
+        challenges[challengeId] = Challenge({trainingRunId: trainingRunId, challenger: msg.sender, resolved: false});
 
         emit ChallengeSubmitted(challengeId, trainingRunId, msg.sender);
         return challengeId;
@@ -162,17 +140,11 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// @notice slash is called by Prime Intellect admin.
     /// Slash amount is discretionary.
     /// sends staked PIN to 0x address (burn).
-    function slash(
-        address account,
-        uint256 amount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+    function slash(address account, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
         ComputeBalancesInfo storage balances = computeNodeBalances[account];
         uint256 totalBalance = balances.currentBalance;
 
-        require(
-            totalBalance >= amount,
-            "Slash amount exceeds total staked balance"
-        );
+        require(totalBalance >= amount, "Slash amount exceeds total staked balance");
 
         balances.currentBalance -= amount;
         PIN.burn(account, amount);
@@ -193,10 +165,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
 
         for (uint256 i = 0; i < nodeInfo.participatedRuns.length; i++) {
             uint256 trainingRunId = nodeInfo.participatedRuns[i];
-            (, uint256 runRewards) = calculateRunRewards(
-                account,
-                trainingRunId
-            );
+            (, uint256 runRewards) = calculateRunRewards(account, trainingRunId);
             totalPendingRewards += runRewards;
         }
 
@@ -208,10 +177,11 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// @param trainingRunId The ID of the training run
     /// @return isClaimable Whether the rewards are claimable
     /// @return rewards The amount of rewards for this training run
-    function calculateRunRewards(
-        address account,
-        uint256 trainingRunId
-    ) internal view returns (bool isClaimable, uint256 rewards) {
+    function calculateRunRewards(address account, uint256 trainingRunId)
+        internal
+        view
+        returns (bool isClaimable, uint256 rewards)
+    {
         ComputeBalancesInfo storage nodeInfo = computeNodeBalances[account];
         uint256 attestationCount = nodeInfo.attestationsPerRun[trainingRunId];
         uint256 endTime = trainingManager.getTrainingRunEndTime(trainingRunId);
@@ -235,10 +205,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         for (uint256 i = 0; i < nodeInfo.participatedRuns.length; i++) {
             uint256 trainingRunId = nodeInfo.participatedRuns[i];
             // use calculateRunRewards above to return rewards for that run
-            (bool isClaimable, uint256 runRewards) = calculateRunRewards(
-                msg.sender,
-                trainingRunId
-            );
+            (bool isClaimable, uint256 runRewards) = calculateRunRewards(msg.sender, trainingRunId);
             // if run rewards are claimable (over 7 days delay) then add run rewards to total rewards
             if (isClaimable) {
                 totalRewards += runRewards;
@@ -247,8 +214,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
             } else {
                 // Keep unclaimed runs
                 if (i != newLength) {
-                    nodeInfo.participatedRuns[newLength] = nodeInfo
-                        .participatedRuns[i];
+                    nodeInfo.participatedRuns[newLength] = nodeInfo.participatedRuns[i];
                 }
                 newLength++;
             }
@@ -268,14 +234,8 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Can only be called by the StakingManager contract
     /// @dev Used to increment attestations balance for rewards accounting.
-    function recordAttestation(
-        address account,
-        uint256 trainingRunId
-    ) external {
-        require(
-            msg.sender == address(trainingManager),
-            "Only TrainingManager can record attestations"
-        );
+    function recordAttestation(address account, uint256 trainingRunId) external {
+        require(msg.sender == address(trainingManager), "Only TrainingManager can record attestations");
         ComputeBalancesInfo storage nodeInfo = computeNodeBalances[account];
         nodeInfo.attestationsPerRun[trainingRunId]++;
 
@@ -298,9 +258,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     }
 
     /// @notice Get the balance of PIN tokens staked by compute node account
-    function getComputeNodeBalance(
-        address account
-    ) external view returns (uint256) {
+    function getComputeNodeBalance(address account) external view returns (uint256) {
         return computeNodeBalances[account].currentBalance;
     }
 }
