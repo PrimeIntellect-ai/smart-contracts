@@ -30,11 +30,7 @@ See below for a system diagram of this process.
 
 ![systemDiagram](./documentation/systemDiagram.jpg)
 
-## Developer Usage
-
-This project was developed using forge and tested on a local anvil testnet.
-
-# File Overview:
+## File Overview:
 
 - src
   - interfaces
@@ -46,6 +42,10 @@ This project was developed using forge and tested on a local anvil testnet.
   - ...
 - client
   - PrimeIntellectRewards.py
+
+## Developer Usage
+
+This project was developed using forge and tested on a local anvil testnet.
 
 ### Build
 
