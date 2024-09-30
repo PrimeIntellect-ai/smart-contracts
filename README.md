@@ -1,4 +1,4 @@
-## Prime Intellect Incentives Network
+# Prime Intellect Incentives Network
 
 **Prime Intellect is a global compute network that uses smart contracts facilitate trading and rewards between Compute Providers, Model Trainers, and Token Holders.**
 
@@ -10,7 +10,7 @@ The goals of the PoC are as follows:
 -   **Run training models and submit attestations**
 -   **Reward $PIN tokens for valid submissions**
 
-## Documentation
+# Documentation
 
 -   **Prime Intellect Network Token (PIN)**: The native token of the Prime Intellect ecosystem.
 -   **TrainingManager**: Swiss army knife for interacting with training logic. 
@@ -40,6 +40,9 @@ See below for a system diagram of this process.
 - test
   - RewardsTest.t.sol
   - ...
+- lib
+  - forge-std
+  - openzeppelin-contracts
 - client
   - PrimeIntellectRewards.py
 
