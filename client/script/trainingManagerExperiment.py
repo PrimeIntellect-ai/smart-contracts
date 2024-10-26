@@ -71,16 +71,16 @@ run_status = contract.functions.getTrainingRunStatus(run_id).call()
 print("Run status ", run_status)  # 0
 nodes = contract.functions.getComputeNodesForTrainingRun(run_id).call()
 print("Registered nodes ", nodes)
-is_valid = contract.functions.isComputeNodeValid(node_1_pub_key).call()
+is_valid = contract.functions.isComputeNodeWhitelisted(node_1_pub_key).call()
 print("Is valid? ", node_1_pub_key, is_valid)  # True
-is_valid = contract.functions.isComputeNodeValid(pub_key).call()
+is_valid = contract.functions.isComputeNodeWhitelisted(pub_key).call()
 print("Is valid? ", node_1_pub_key, is_valid)  # False
 print("Run status ", run_status) # 0
 nodes = contract.functions.getComputeNodesForTrainingRun(run_id).call()
 print("Registered nodes ", nodes)
-is_valid = contract.functions.isComputeNodeValid(node_1_pub_key).call()
+is_valid = contract.functions.isComputeNodeWhitelisted(node_1_pub_key).call()
 print("Is valid? ", node_1_pub_key, is_valid) # True
-is_valid = contract.functions.isComputeNodeValid(pub_key).call()
+is_valid = contract.functions.isComputeNodeWhitelisted(pub_key).call()
 print("Is valid? ", node_1_pub_key, is_valid) # False
 
 # start: model trainer

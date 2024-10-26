@@ -13,7 +13,7 @@ import "../src/interfaces/ITrainingManager.sol";
 contract EndToEndTest is Test {
     StakingManager public stakingManager;
     TrainingManager public trainingManager;
-    PrimeIntellectToken public PIN;
+    PrimeIntellectToken public PI;
 
     // create our users
     address public admin = address(1);
@@ -27,12 +27,12 @@ contract EndToEndTest is Test {
         vm.startPrank(admin);
 
         // deploy token contract
-        PIN = new PrimeIntellectToken("Prime Intellect Token", "PIN");
+        PI = new PrimeIntellectToken("Prime Intellect Token", "PI");
         // deploy training manager
         trainingManager = new TrainingManager();
         // deploy staking manager
         stakingManager = new StakingManager(
-            address(PIN),
+            address(PI),
             address(trainingManager)
         );
 
@@ -42,9 +42,9 @@ contract EndToEndTest is Test {
 
         // issue tokens to our compute nodes
         // admin has minter role by default
-        PIN.mint(computeNode, INITIAL_SUPPLY);
-        PIN.mint(computeNode2, INITIAL_SUPPLY);
-        PIN.mint(computeNode3, INITIAL_SUPPLY);
+        PI.mint(computeNode, INITIAL_SUPPLY);
+        PI.mint(computeNode2, INITIAL_SUPPLY);
+        PI.mint(computeNode3, INITIAL_SUPPLY);
         vm.stopPrank();
     }
 
@@ -54,14 +54,14 @@ contract EndToEndTest is Test {
         uint256 minStake = stakingManager.MIN_DEPOSIT();
 
         // add our compute nodes to whitelist
-        trainingManager.addComputeNode(computeNode);
-        trainingManager.addComputeNode(computeNode2);
-        trainingManager.addComputeNode(computeNode3);
+        trainingManager.whitelistComputeNode(computeNode);
+        trainingManager.whitelistComputeNode(computeNode2);
+        trainingManager.whitelistComputeNode(computeNode3);
         vm.stopPrank();
 
         // first compute node stakes
         vm.startPrank(computeNode);
-        PIN.approve(address(stakingManager), minStake);
+        PI.approve(address(stakingManager), minStake);
         stakingManager.stake(minStake);
 
         assertEq(

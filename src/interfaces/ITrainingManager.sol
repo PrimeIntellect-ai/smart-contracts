@@ -5,17 +5,15 @@ interface ITrainingManager {
     enum ModelStatus {
         Registered,
         Running,
+        Paused,
         Done
     }
 
     function registerModel(
-        string memory name,
-        uint256 budget
+        string memory name
     ) external returns (uint256);
 
     function name(uint256 trainingRunId) external view returns (string memory);
-
-    function budget(uint256 trainingRunId) external view returns (uint256);
 
     /// @notice Gets status of training run for id
     function getModelStatus(
@@ -24,16 +22,15 @@ interface ITrainingManager {
 
     function joinTrainingRun(
         address account,
-        string memory ipAddress,
         uint256 trainingRunId
     ) external returns (bool);
 
     /// @notice Registers compute node for training run
     /// @dev Function not called by compute node, so registration needs knowledge of compute nodes
-    function addComputeNode(address account) external;
+    function whitelistComputeNode(address account) external;
 
-    /// @notice Returns if compute node is valid by ip
-    function isComputeNodeValid(address account) external returns (bool);
+    /// @notice Returns if compute node is whitelisted or not
+    function isComputeNodeWhitelisted(address account) external returns (bool);
 
     function startTrainingRun(uint256 trainingRunId) external returns (bool);
 
@@ -69,7 +66,6 @@ interface ITrainingManager {
         view
         returns (
             string memory _name,
-            uint256 _budget,
             ModelStatus status,
             address[] memory computeNodes
         );
@@ -77,4 +73,7 @@ interface ITrainingManager {
     function getTrainingRunEndTime(
         uint256 trainingRunId
     ) external returns (uint256);
+
+    function pauseTrainingRun(uint256 trainingRunId) external returns (bool);
+    function resumeTrainingRun(uint256 trainingRunId) external returns (bool);
 }

@@ -1,3 +1,0 @@
-forge create --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 src/TrainingManager.sol:TrainingManager
-forge create --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 src/PrimeIntellectToken.sol:PrimeIntellectToken --constructor-args "Prime-Intellect-Token" "PIN"
-forge create --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 src/StakingManager.sol:StakingManager --constructor-args "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" "0x5fbdb2315678afecb367f032d93f642f64180aa3"

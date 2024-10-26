@@ -14,17 +14,16 @@ import "./interfaces/IStakingManager.sol";
 contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
-    // The Prime Intellect Network (PIN) token
-    PrimeIntellectToken public PIN;
+    // The Prime Intellect Network (PI) token
+    PrimeIntellectToken public PI;
     TrainingManager public trainingManager;
 
-    // 1 year of H100 hrs = 8760 PIN
     uint256 public MIN_DEPOSIT;
 
     // Constant for days after training run ends when rewards become claimable
     uint256 public constant CLAIM_DELAY_DAYS = 7;
 
-    // Reward rate: 1 PIN per attestation
+    // Reward rate: 1 PI per attestation
     uint256 public constant REWARD_RATE = 1;
 
     struct ComputeBalancesInfo {
@@ -33,35 +32,25 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         uint256[] participatedRuns;
     }
 
-    struct Challenge {
-        uint256 trainingRunId;
-        address challenger;
-        bool resolved;
-    }
-
     mapping(address => ComputeBalancesInfo) public computeNodeBalances; // Mapping of compute node balances
     mapping(uint256 => uint256) public attestationsPerTrainingRun; // Mapping to track attestations per training run
-    mapping(uint256 => Challenge) public challenges;
 
     event Staked(address indexed account, uint256 amount);
     event Withdrew(address indexed account, uint256 amount);
-    event ChallengeSubmitted(
-        uint256 indexed challengeId,
-        uint256 indexed trainingRunId,
-        address indexed challenger
-    );
     event Slashed(address indexed account, uint256 amount);
     event RewardsClaimed(address indexed account, uint256 amount);
     event AttestationRecorded(address indexed account, uint256 trainingRunId);
 
     constructor(address _pinTokenAddress, address _trainingManagerAddress) {
-        PIN = PrimeIntellectToken(_pinTokenAddress);
+        PI = PrimeIntellectToken(_pinTokenAddress);
         require(
             _trainingManagerAddress != address(0),
             "Invalid TrainingManager address"
         );
         trainingManager = TrainingManager(_trainingManagerAddress);
-        MIN_DEPOSIT = 10000 * 10 ** 18; // 10,000 PIN token (assuming 18 decimals)
+        // 1800 PI token (assuming 18 decimals)
+        // 10X weekly reward rate, and 70X daily reward rate, assuming 8xH100s
+        MIN_DEPOSIT = 1800 * 10 ** 18;
     }
 
     /////////////////////////////////////////
@@ -91,69 +80,36 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     /// Balance associated to compute node address
     function stake(uint256 _amount) external nonReentrant {
         require(
-            trainingManager.isComputeNodeValid(msg.sender),
+            trainingManager.isComputeNodeWhitelisted(msg.sender),
             "Not on Compute Node whitelist"
         );
         require(_amount >= MIN_DEPOSIT, "Must be greater than min deposit");
         ComputeBalancesInfo storage balances = computeNodeBalances[msg.sender];
 
-        // transfer PIN tokens to staking manager
-        PIN.transferFrom(msg.sender, address(this), _amount);
-        // increment PIN balance for compute node
-        balances.currentBalance = balances.currentBalance + _amount;
+        // transfer PI tokens to staking manager
+        PI.transferFrom(msg.sender, address(this), _amount);
+        // increment PI balance for compute node
+        balances.currentBalance += _amount;
 
         emit Staked(msg.sender, _amount);
     }
 
-    /// @notice Withdraw staked PIN from PrimeIntellectManager
-    /// @param _amount Amount of PIN tokens to withdraw
+    /// @notice Withdraw staked PI from PrimeIntellectManager
+    /// @param _amount Amount of PI tokens to withdraw
     function withdraw(uint256 _amount) external nonReentrant {
         ComputeBalancesInfo storage balances = computeNodeBalances[msg.sender];
         require(balances.currentBalance >= _amount, "Insufficient balance");
 
         balances.currentBalance = balances.currentBalance - _amount;
 
-        require(PIN.transfer(msg.sender, _amount), "Transfer failed");
+        require(PI.transfer(msg.sender, _amount), "Transfer failed");
 
         emit Withdrew(msg.sender, _amount);
     }
 
-    /// @notice challenges posted for a specific training hash (compute provider & training run Id)
-    /// Challenge is for notification purposes only at the moment.
-    /// returns challengeId
-    function challenge(
-        uint256 _trainingRunId,
-        address _computeNode
-    ) external whenNotPaused returns (uint256) {
-        require(
-            trainingManager.getModelStatus(_trainingRunId) ==
-                ITrainingManager.ModelStatus.Done,
-            "Training run has not finished"
-        );
-        require(
-            block.timestamp <=
-                trainingManager.getTrainingRunEndTime(_trainingRunId) + 7 days,
-            "Challenge period has expired"
-        );
-
-        uint256 challengeId = uint256(
-            keccak256(
-                abi.encodePacked(_trainingRunId, _computeNode, block.timestamp)
-            )
-        );
-        challenges[challengeId] = Challenge({
-            trainingRunId: _trainingRunId,
-            challenger: msg.sender,
-            resolved: false
-        });
-
-        emit ChallengeSubmitted(challengeId, _trainingRunId, msg.sender);
-        return challengeId;
-    }
-
     /// @notice slash is called by Prime Intellect admin.
     /// Slash amount is discretionary.
-    /// sends staked PIN to 0x address (burn).
+    /// sends staked PI to 0x address (burn).
     function slash(
         address _account,
         uint256 _amount
@@ -167,7 +123,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         );
 
         balances.currentBalance -= _amount;
-        PIN.burn(_account, _amount);
+        PI.burn(_account, _amount);
 
         emit Slashed(_account, _amount);
     }
@@ -252,8 +208,8 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         while (nodeInfo.participatedRuns.length > newLength) {
             nodeInfo.participatedRuns.pop();
         }
-        // staking manager is approved minter on PIN token contract
-        PIN.mint(msg.sender, totalRewards);
+        // staking manager is approved minter on PI token contract
+        PI.mint(msg.sender, totalRewards);
 
         emit RewardsClaimed(msg.sender, totalRewards);
     }
@@ -283,13 +239,13 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     ////        GETTER FUNCTIONS        ///
     ///////////////////////////////////////
 
-    /// @notice Get the balance of PIN tokens held by the staking contract
-    /// @return The balance of PIN tokens held by this contract
+    /// @notice Get the balance of PI tokens held by the staking contract
+    /// @return The balance of PI tokens held by this contract
     function getContractBalance() external view returns (uint256) {
-        return PIN.balanceOf(address(this));
+        return PI.balanceOf(address(this));
     }
 
-    /// @notice Get the balance of PIN tokens staked by compute node account
+    /// @notice Get the balance of PI tokens staked by compute node account
     function getComputeNodeBalance(
         address account
     ) external view returns (uint256) {

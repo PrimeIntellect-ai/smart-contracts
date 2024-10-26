@@ -9,7 +9,7 @@ import "../src/PrimeIntellectToken.sol";
 contract TrainingManagerTest is Test {
     TrainingManager public trainingManager;
     StakingManager public stakingManager;
-    PrimeIntellectToken public PIN;
+    PrimeIntellectToken public PI;
 
     address public admin = address(1);
     address public computeNode = address(2);
@@ -21,19 +21,19 @@ contract TrainingManagerTest is Test {
     function setUp() public {
         vm.startPrank(admin);
 
-        PIN = new PrimeIntellectToken("Prime Intellect Token", "PIN");
+        PI = new PrimeIntellectToken("Prime Intellect Token", "PI");
         trainingManager = new TrainingManager();
         stakingManager = new StakingManager(
-            address(PIN),
+            address(PI),
             address(trainingManager)
         );
 
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
 
-        PIN.mint(computeNode, INITIAL_SUPPLY);
+        PI.mint(computeNode, INITIAL_SUPPLY);
 
-        trainingManager.addComputeNode(computeNode);
+        trainingManager.whitelistComputeNode(computeNode);
 
         vm.stopPrank();
     }
@@ -42,22 +42,15 @@ contract TrainingManagerTest is Test {
         vm.startPrank(admin);
 
         string memory modelName = "Test Model";
-        uint256 modelBudget = 1000;
 
         uint256 trainingRunId = trainingManager.registerModel(
-            modelName,
-            modelBudget
+            modelName
         );
 
         assertEq(
             trainingManager.name(trainingRunId),
             modelName,
             "Model name not set correctly"
-        );
-        assertEq(
-            trainingManager.budget(trainingRunId),
-            modelBudget,
-            "Model budget not set correctly"
         );
         assertEq(
             uint256(trainingManager.getModelStatus(trainingRunId)),
@@ -72,10 +65,9 @@ contract TrainingManagerTest is Test {
         );
 
         string memory anotherModel = "Test Model";
-        uint256 anotherBudget = 1000;
 
         vm.expectRevert("Model already registered");
-        trainingManager.registerModel(anotherModel, anotherBudget);
+        trainingManager.registerModel(anotherModel);
 
         vm.stopPrank();
     }
@@ -84,21 +76,21 @@ contract TrainingManagerTest is Test {
         vm.startPrank(admin);
 
         vm.expectRevert("Compute node already registered");
-        trainingManager.addComputeNode(computeNode);
+        trainingManager.whitelistComputeNode(computeNode);
 
-        trainingManager.addComputeNode(computeNode2);
+        trainingManager.whitelistComputeNode(computeNode2);
 
-        bool isValid = trainingManager.isComputeNodeValid(computeNode2);
+        bool isValid = trainingManager.isComputeNodeWhitelisted(computeNode2);
 
         assertTrue(isValid, "Compute node should be valid after registration");
 
         vm.expectRevert("Compute node already registered");
-        trainingManager.addComputeNode(computeNode2);
+        trainingManager.whitelistComputeNode(computeNode2);
 
         address anotherComputeNode = address(4);
-        trainingManager.addComputeNode(anotherComputeNode);
+        trainingManager.whitelistComputeNode(anotherComputeNode);
 
-        bool isAnotherValid = trainingManager.isComputeNodeValid(
+        bool isAnotherValid = trainingManager.isComputeNodeWhitelisted(
             (anotherComputeNode)
         );
 
@@ -111,28 +103,24 @@ contract TrainingManagerTest is Test {
     }
 
     function test_JoinTrainingRun() public {
-        string memory ipAddress = "192.168.1.1";
         uint256 stakeAmount = MIN_DEPOSIT + MIN_DEPOSIT;
 
         vm.startPrank(admin);
 
         string memory modelName = "Test Model";
-        uint256 modelBudget = 1000;
 
         uint256 trainingRunId = trainingManager.registerModel(
-            modelName,
-            modelBudget
+            modelName
         );
         vm.stopPrank();
 
         vm.startPrank(computeNode);
 
-        PIN.approve(address(stakingManager), stakeAmount);
+        PI.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
 
         bool success = trainingManager.joinTrainingRun(
             computeNode,
-            ipAddress,
             trainingRunId
         );
 
@@ -140,7 +128,6 @@ contract TrainingManagerTest is Test {
 
         (
             string memory name,
-            uint256 budget,
             ITrainingManager.ModelStatus status,
             address[] memory computeNodes
         ) = trainingManager.getTrainingRunInfo(trainingRunId);
@@ -148,7 +135,6 @@ contract TrainingManagerTest is Test {
         uint256(status);
 
         assertEq(name, modelName, "Name should match constructor");
-        assertEq(budget, modelBudget, "Budget should match constructor");
         assertEq(computeNodes.length, 1, "Should have one compute node");
         assertEq(
             computeNodes[0],
@@ -161,28 +147,23 @@ contract TrainingManagerTest is Test {
 
     /// test to start a training run and submit attestations
     function test_StartAndSubmit() public {
-        string memory ipAddress1 = "192.168.1.1";
         uint256 stakeAmount = MIN_DEPOSIT;
 
         vm.startPrank(admin);
 
         string memory modelName = "Test Model";
-        uint256 modelBudget = 1000;
 
         uint256 trainingRunId = trainingManager.registerModel(
-            modelName,
-            modelBudget
+            modelName
         );
 
-        // TrainingManager.ModelStatus status0 = trainingManager
-        //     .getTrainingRunStatus(trainingRunId);
         vm.stopPrank();
 
         vm.startPrank(computeNode);
         // join run
-        PIN.approve(address(stakingManager), stakeAmount);
+        PI.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
-        trainingManager.joinTrainingRun(computeNode, ipAddress1, trainingRunId);
+        trainingManager.joinTrainingRun(computeNode, trainingRunId);
         vm.stopPrank();
 
         // start run
@@ -212,11 +193,9 @@ contract TrainingManagerTest is Test {
         vm.startPrank(admin);
 
         string memory modelName = "Test Model";
-        uint256 modelBudget = 1000;
 
         uint256 trainingRunId = trainingManager.registerModel(
-            modelName,
-            modelBudget
+            modelName
         );
 
         TrainingManager.ModelStatus status0 = trainingManager.getModelStatus(

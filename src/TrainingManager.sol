@@ -16,7 +16,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
 
     struct TrainingRunInfo {
         string name;
-        uint256 budget;
         ModelStatus status;
         address[] computeNodesArray;
         mapping(address => ComputeNodeInfo) computeNodes;
@@ -26,20 +25,24 @@ contract TrainingManager is ITrainingManager, AccessControl {
     mapping(uint256 => TrainingRunInfo) public trainingRunData;
 
     // compute node whitelist
-    mapping(address => bool) public registeredValidComputeNodes;
+    mapping(address => bool) public computeNodeWhitelist;
 
     // mapping to check for duplicate model registrations
     mapping(bytes32 => bool) public registeredModelHashes;
 
     uint256 public trainingRunIdCount;
 
-    event ComputeNodeAdded(address indexed account);
+    event TrainingRunRegistered(uint256 _trainingRunId, string _name);
+    event TrainingRunStarted(uint256 _trainingRunId);
+    event ComputeNodeJoined(address indexed account);
     event TrainingRunEnded(uint256 _trainingRunId, uint256 endTime);
     event AttestationSubmitted(
         address indexed computeNode,
         uint256 trainingRunId
     );
     event StakingManagerSet(address stakingManager);
+    event TrainingRunPaused(uint256 _trainingRunId);
+    event TrainingRunResumed(uint256 _trainingRunId);
 
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -61,19 +64,19 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /////////////////////////////////////
 
     function registerModel(
-        string memory _name,
-        uint256 _budget
+        string memory _name
     ) external override returns (uint256) {
-        bytes32 modelHash = keccak256(abi.encodePacked(_name, _budget));
+        bytes32 modelHash = keccak256(abi.encodePacked(_name));
         require(!registeredModelHashes[modelHash], "Model already registered");
 
         trainingRunIdCount++;
         TrainingRunInfo storage newRun = trainingRunData[trainingRunIdCount];
         newRun.status = ModelStatus.Registered;
         newRun.name = _name;
-        newRun.budget = _budget;
 
         registeredModelHashes[modelHash] = true;
+
+        emit TrainingRunRegistered(trainingRunIdCount, _name);
 
         return trainingRunIdCount;
     }
@@ -98,24 +101,15 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return trainingRunData[trainingRunId].name;
     }
 
-    /// @notice Returns the budget for the training run
-    function budget(
-        uint256 trainingRunId
-    ) public view override returns (uint256) {
-        return trainingRunData[trainingRunId].budget;
-    }
-
     /////////////////////////////////////
     ////         TRAINING RUN         ///
     /////////////////////////////////////
 
     /// @notice Adds compute node to list of compute providers for training run
     /// @param account wallet address of compute node
-    /// @param ipAddress ip address that will be associated with compute attestations
     /// @param trainingRunId the id for the training run
     function joinTrainingRun(
         address account,
-        string memory ipAddress,
         uint256 trainingRunId
     ) external returns (bool) {
         require(
@@ -127,7 +121,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
                 stakingManager.MIN_DEPOSIT(),
             "Insufficient staked balance"
         );
-        require(bytes(ipAddress).length > 0, "IP address cannot be empty");
+        require(computeNodeWhitelist[account], "Compute node not whitelisted");
 
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
@@ -150,36 +144,33 @@ contract TrainingManager is ITrainingManager, AccessControl {
         );
 
         runInfo.computeNodesArray.push(account);
-        runInfo.computeNodes[account].index =
-            runInfo.computeNodesArray.length -
-            1;
+        uint256 index = runInfo.computeNodesArray.length - 1;
+        runInfo.computeNodes[account].index = index;
 
-        registeredValidComputeNodes[account] = true;
+        emit ComputeNodeJoined(account);
         return true;
     }
 
     /// @dev Adds compute node to whitelist of valid compute nodes
-    function addComputeNode(address account) external {
+    function whitelistComputeNode(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(account != address(0), "Invalid node address");
         require(
-            !registeredValidComputeNodes[account],
+            !computeNodeWhitelist[account],
             "Compute node already registered"
         );
-        registeredValidComputeNodes[account] = true;
-
-        emit ComputeNodeAdded(account);
+        computeNodeWhitelist[account] = true;
     }
 
-    /// @dev Checks if a compute node has been added
-    function isComputeNodeValid(address account) external view returns (bool) {
-        return registeredValidComputeNodes[account];
+    /// @dev Checks if a compute node has been added to the whitelist
+    function isComputeNodeWhitelisted(address account) external view returns (bool) {
+        return computeNodeWhitelist[account];
     }
 
     /// @dev Starts training run
     /// must be Prime Intellect admin
     function startTrainingRun(
         uint256 _trainingRunId
-    ) external override returns (bool) {
+    ) external override onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
         require(
             runInfo.status == ModelStatus.Registered,
@@ -192,7 +183,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
     /// @notice Can only be called by Prime Intellect admin to end the training run
     function endTrainingRun(
         uint256 _trainingRunId
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
+    ) external override onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
         TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
         require(
             runInfo.status == ModelStatus.Running,
@@ -217,7 +208,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
             runInfo.status == ModelStatus.Running,
-            "Training run is not active"
+            "Training run is not active or is paused"
         );
 
         ComputeNodeInfo storage nodeInfo = runInfo.computeNodes[account];
@@ -245,7 +236,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
             runInfo.status != ModelStatus.Registered,
             "Training run not started"
         );
-        require(registeredValidComputeNodes[account], "Invalid compute node");
 
         ComputeNodeInfo storage nodeInfo = runInfo.computeNodes[account];
         require(
@@ -278,7 +268,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
         return nodeInfo.attestations;
     }
 
-    /// @dev Returns name, budget, status, and nodes for a training run
+    /// @dev Returns name, status, and nodes for a training run
     function getTrainingRunInfo(
         uint256 trainingRunId
     )
@@ -286,7 +276,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
         view
         returns (
             string memory _name,
-            uint256 _budget,
             ModelStatus status,
             address[] memory computeNodes
         )
@@ -294,7 +283,6 @@ contract TrainingManager is ITrainingManager, AccessControl {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         return (
             runInfo.name,
-            runInfo.budget,
             runInfo.status,
             runInfo.computeNodesArray
         );
@@ -310,5 +298,33 @@ contract TrainingManager is ITrainingManager, AccessControl {
             "Training run has not ended"
         );
         return runInfo.endTime;
+    }
+
+    function pauseTrainingRun(
+        uint256 _trainingRunId
+    ) external override onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
+        TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
+        require(
+            runInfo.status == ModelStatus.Running,
+            "Training run is not in Running state"
+        );
+
+        runInfo.status = ModelStatus.Paused;
+        emit TrainingRunPaused(_trainingRunId);
+        return true;
+    }
+
+    function resumeTrainingRun(
+        uint256 _trainingRunId
+    ) external override onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
+        TrainingRunInfo storage runInfo = trainingRunData[_trainingRunId];
+        require(
+            runInfo.status == ModelStatus.Paused,
+            "Training run is not in Paused state"
+        );
+
+        runInfo.status = ModelStatus.Running;
+        emit TrainingRunResumed(_trainingRunId);
+        return true;
     }
 }
