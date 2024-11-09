@@ -125,7 +125,7 @@ contract TrainingManager is ITrainingManager, AccessControl {
 
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
         require(
-            runInfo.status == ModelStatus.Registered,
+            runInfo.status == ModelStatus.Registered || runInfo.status == ModelStatus.Running,
             "Invalid training run status"
         );
 
@@ -293,10 +293,9 @@ contract TrainingManager is ITrainingManager, AccessControl {
         uint256 trainingRunId
     ) external view override returns (uint256) {
         TrainingRunInfo storage runInfo = trainingRunData[trainingRunId];
-        require(
-            runInfo.status == ModelStatus.Done,
-            "Training run has not ended"
-        );
+        if (runInfo.status != ModelStatus.Done) {
+            return 0;
+        }
         return runInfo.endTime;
     }
 

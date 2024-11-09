@@ -5,13 +5,13 @@ pragma solidity ^0.8.13;
 import {Test, console} from "forge-std/Test.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../src/StakingManager.sol";
-import "../src/PrimeIntellectToken.sol";
+import "../src/AsimovToken.sol";
 import "../src/TrainingManager.sol";
 
 contract StakingManagerTest is Test {
     StakingManager public stakingManager;
     TrainingManager public trainingManager;
-    PrimeIntellectToken public PI;
+    AsimovToken public ASI;
 
     address public admin = address(1);
     address public computeNode = address(2);
@@ -22,19 +22,19 @@ contract StakingManagerTest is Test {
     function setUp() public {
         vm.startPrank(admin);
 
-        PI = new PrimeIntellectToken("Prime-Intellect-Token", "PI");
+        ASI = new AsimovToken("Asimov-Token", "ASI");
         trainingManager = new TrainingManager();
         stakingManager = new StakingManager(
-            address(PI),
+            address(ASI),
             address(trainingManager)
         );
 
-        PI.grantRole(PI.MINTER_ROLE(), address(stakingManager));
+        ASI.grantRole(ASI.MINTER_ROLE(), address(stakingManager));
 
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
 
-        PI.mint(computeNode, INITIAL_SUPPLY);
+        ASI.mint(computeNode, INITIAL_SUPPLY);
 
         trainingManager.whitelistComputeNode(computeNode);
 
@@ -46,23 +46,23 @@ contract StakingManagerTest is Test {
 
         vm.startPrank(computeNode);
 
-        uint256 initialPIBalance = PI.balanceOf(computeNode);
+        uint256 initialASIBalance = ASI.balanceOf(computeNode);
         uint256 initialStakedBalance = stakingManager.getComputeNodeBalance(
             computeNode
         );
 
-        PI.approve(address(stakingManager), stakeAmount);
+        ASI.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
 
-        uint256 finalPIBalance = PI.balanceOf(computeNode);
+        uint256 finalASIBalance = ASI.balanceOf(computeNode);
         uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
             computeNode
         );
 
         assertEq(
-            finalPIBalance,
-            initialPIBalance - stakeAmount,
-            "PI balance should decrease by staked amount"
+            finalASIBalance,
+            initialASIBalance - stakeAmount,
+            "ASI balance should decrease by staked amount"
         );
 
         // check if the staked balance increased by staked amount
@@ -78,7 +78,7 @@ contract StakingManagerTest is Test {
         );
 
         assertEq(
-            PI.balanceOf(address(stakingManager)),
+            ASI.balanceOf(address(stakingManager)),
             stakeAmount,
             "StakingManager balance should match staked amount"
         );
@@ -87,7 +87,7 @@ contract StakingManagerTest is Test {
 
         vm.startPrank(computeNode);
         uint256 lowStakeAmount = stakingManager.MIN_DEPOSIT() - 1;
-        PI.approve(address(stakingManager), lowStakeAmount);
+        ASI.approve(address(stakingManager), lowStakeAmount);
         vm.expectRevert("Must be greater than min deposit");
         stakingManager.stake(lowStakeAmount);
         vm.stopPrank();
@@ -101,9 +101,9 @@ contract StakingManagerTest is Test {
         address computeNode4 = address(5);
 
         vm.startPrank(admin);
-        PI.mint(computeNode2, INITIAL_SUPPLY);
-        PI.mint(computeNode3, INITIAL_SUPPLY);
-        PI.mint(computeNode4, INITIAL_SUPPLY);
+        ASI.mint(computeNode2, INITIAL_SUPPLY);
+        ASI.mint(computeNode3, INITIAL_SUPPLY);
+        ASI.mint(computeNode4, INITIAL_SUPPLY);
 
         trainingManager.whitelistComputeNode(computeNode2);
         trainingManager.whitelistComputeNode(computeNode3);
@@ -112,7 +112,7 @@ contract StakingManagerTest is Test {
 
         // compute node 1
         vm.startPrank(computeNode);
-        PI.approve(address(stakingManager), stakeAmount);
+        ASI.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
 
         uint256 finalStakedBalance = stakingManager.getComputeNodeBalance(
@@ -127,7 +127,7 @@ contract StakingManagerTest is Test {
 
         // compute node 2
         vm.startPrank(computeNode2);
-        PI.approve(address(stakingManager), stakeAmount);
+        ASI.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
         uint256 finalStakedBalance2 = stakingManager.getComputeNodeBalance(
             computeNode2
@@ -141,7 +141,7 @@ contract StakingManagerTest is Test {
 
         // compute node 3
         vm.startPrank(computeNode3);
-        PI.approve(address(stakingManager), stakeAmount);
+        ASI.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
 
         uint256 finalStakedBalance3 = stakingManager.getComputeNodeBalance(
@@ -165,7 +165,7 @@ contract StakingManagerTest is Test {
 
         vm.startPrank(computeNode);
 
-        PI.approve(address(stakingManager), stakeAmount);
+        ASI.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
 
         uint256 stakedBalanceBeforeWithdraw = stakingManager
@@ -183,7 +183,7 @@ contract StakingManagerTest is Test {
         assertEq(
             finalStakedBalance,
             stakedBalanceBeforeWithdraw - withdrawAmount,
-            "PI balance should decrease by withdraw amount"
+            "ASI balance should decrease by withdraw amount"
         );
 
         vm.stopPrank();

@@ -4,12 +4,12 @@ pragma solidity ^0.8.19;
 import {Test, console} from "forge-std/Test.sol";
 import {TrainingManager} from "../src/TrainingManager.sol";
 import "../src/StakingManager.sol";
-import "../src/PrimeIntellectToken.sol";
+import "../src/AsimovToken.sol";
 
 contract TrainingManagerTest is Test {
     TrainingManager public trainingManager;
     StakingManager public stakingManager;
-    PrimeIntellectToken public PI;
+    AsimovToken public ASI;
 
     address public admin = address(1);
     address public computeNode = address(2);
@@ -21,17 +21,17 @@ contract TrainingManagerTest is Test {
     function setUp() public {
         vm.startPrank(admin);
 
-        PI = new PrimeIntellectToken("Prime Intellect Token", "PI");
+        ASI = new AsimovToken("Prime Intellect Token", "ASI");
         trainingManager = new TrainingManager();
         stakingManager = new StakingManager(
-            address(PI),
+            address(ASI),
             address(trainingManager)
         );
 
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
 
-        PI.mint(computeNode, INITIAL_SUPPLY);
+        ASI.mint(computeNode, INITIAL_SUPPLY);
 
         trainingManager.whitelistComputeNode(computeNode);
 
@@ -116,7 +116,7 @@ contract TrainingManagerTest is Test {
 
         vm.startPrank(computeNode);
 
-        PI.approve(address(stakingManager), stakeAmount);
+        ASI.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
 
         bool success = trainingManager.joinTrainingRun(
@@ -161,7 +161,7 @@ contract TrainingManagerTest is Test {
 
         vm.startPrank(computeNode);
         // join run
-        PI.approve(address(stakingManager), stakeAmount);
+        ASI.approve(address(stakingManager), stakeAmount);
         stakingManager.stake(stakeAmount);
         trainingManager.joinTrainingRun(computeNode, trainingRunId);
         vm.stopPrank();

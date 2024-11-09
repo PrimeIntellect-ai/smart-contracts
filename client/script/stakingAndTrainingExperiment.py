@@ -28,7 +28,7 @@ else:
 
 import json
 
-abi_json_path = "../out/PrimeIntellectToken.sol/PrimeIntellectToken.json"
+abi_json_path = "../out/AsimovToken.sol/AsimovToken.json"
 with open(abi_json_path, "r") as f:
     abi = json.load(f)
 
@@ -172,7 +172,7 @@ for (index, (public_key, _)) in enumerate(compute_nodes):
         ).call()
         balance = int(balance / 1e18)
 
-        print("Initialized compute node #{} with {} $PI".format(index + 1, balance))
+        print("Initialized compute node #{} with {} $ASI".format(index + 1, balance))
     except:
         pass
 
@@ -203,7 +203,7 @@ for (index, (public_key, private_key)) in enumerate(compute_nodes):
     signed_tx = web3.eth.account.sign_transaction(call_function,private_key=private_key)
     send_tx = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
     response = web3.eth.wait_for_transaction_receipt(send_tx)
-    print("Compute node #{} staked {} $PI".format(index + 1, int(MIN_DEPOSIT / 1e18)))
+    print("Compute node #{} staked {} $ASI".format(index + 1, int(MIN_DEPOSIT / 1e18)))
     pdb.set_trace() # Error: reverted with: EvmError: Revert
 
 budget = int(1000 * 1e18)

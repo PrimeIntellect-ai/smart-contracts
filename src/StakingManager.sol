@@ -7,15 +7,15 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
-import "./PrimeIntellectToken.sol";
+import "./AsimovToken.sol";
 import "./TrainingManager.sol";
 import "./interfaces/IStakingManager.sol";
 
 contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
-    // The Prime Intellect Network (PI) token
-    PrimeIntellectToken public PI;
+    // The Asimov Protocol (ASI) token
+    AsimovToken public ASI;
     TrainingManager public trainingManager;
 
     uint256 public MIN_DEPOSIT;
@@ -23,7 +23,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     // Constant for days after training run ends when rewards become claimable
     uint256 public constant CLAIM_DELAY_DAYS = 7;
 
-    // Reward rate: 1 PI per attestation
+    // Reward rate: 1 ASI per attestation
     uint256 public constant REWARD_RATE = 1;
 
     struct ComputeBalancesInfo {
@@ -41,14 +41,14 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     event RewardsClaimed(address indexed account, uint256 amount);
     event AttestationRecorded(address indexed account, uint256 trainingRunId);
 
-    constructor(address _pinTokenAddress, address _trainingManagerAddress) {
-        PI = PrimeIntellectToken(_pinTokenAddress);
+    constructor(address _asiTokenAddress, address _trainingManagerAddress) {
+        ASI = AsimovToken(_asiTokenAddress);
         require(
             _trainingManagerAddress != address(0),
             "Invalid TrainingManager address"
         );
         trainingManager = TrainingManager(_trainingManagerAddress);
-        // 1800 PI token (assuming 18 decimals)
+        // 1800 ASI token (assuming 18 decimals)
         // 10X weekly reward rate, and 70X daily reward rate, assuming 8xH100s
         MIN_DEPOSIT = 1800 * 10 ** 18;
     }
@@ -86,30 +86,30 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         require(_amount >= MIN_DEPOSIT, "Must be greater than min deposit");
         ComputeBalancesInfo storage balances = computeNodeBalances[msg.sender];
 
-        // transfer PI tokens to staking manager
-        PI.transferFrom(msg.sender, address(this), _amount);
-        // increment PI balance for compute node
+        // transfer ASI tokens to staking manager
+        ASI.transferFrom(msg.sender, address(this), _amount);
+        // increment ASI balance for compute node
         balances.currentBalance += _amount;
 
         emit Staked(msg.sender, _amount);
     }
 
-    /// @notice Withdraw staked PI from PrimeIntellectManager
-    /// @param _amount Amount of PI tokens to withdraw
+    /// @notice Withdraw staked ASI from StakingManager
+    /// @param _amount Amount of ASI tokens to withdraw
     function withdraw(uint256 _amount) external nonReentrant {
         ComputeBalancesInfo storage balances = computeNodeBalances[msg.sender];
         require(balances.currentBalance >= _amount, "Insufficient balance");
 
         balances.currentBalance = balances.currentBalance - _amount;
 
-        require(PI.transfer(msg.sender, _amount), "Transfer failed");
+        require(ASI.transfer(msg.sender, _amount), "Transfer failed");
 
         emit Withdrew(msg.sender, _amount);
     }
 
     /// @notice slash is called by Prime Intellect admin.
     /// Slash amount is discretionary.
-    /// sends staked PI to 0x address (burn).
+    /// sends staked ASI to 0x address (burn).
     function slash(
         address _account,
         uint256 _amount
@@ -123,7 +123,7 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         );
 
         balances.currentBalance -= _amount;
-        PI.burn(_account, _amount);
+        ASI.burn(_account, _amount);
 
         emit Slashed(_account, _amount);
     }
@@ -163,8 +163,10 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         ComputeBalancesInfo storage nodeInfo = computeNodeBalances[account];
         uint256 attestationCount = nodeInfo.attestationsPerRun[trainingRunId];
         uint256 endTime = trainingManager.getTrainingRunEndTime(trainingRunId);
-
-        isClaimable = block.timestamp > endTime + CLAIM_DELAY_DAYS * 1 days;
+        isClaimable = false;
+        if (endTime != 0) {
+            isClaimable = block.timestamp > endTime + CLAIM_DELAY_DAYS * 1 days;
+        }
         rewards = attestationCount * REWARD_RATE;
 
         return (isClaimable, rewards);
@@ -208,8 +210,8 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
         while (nodeInfo.participatedRuns.length > newLength) {
             nodeInfo.participatedRuns.pop();
         }
-        // staking manager is approved minter on PI token contract
-        PI.mint(msg.sender, totalRewards);
+        // staking manager is approved minter on ASI token contract
+        ASI.mint(msg.sender, totalRewards);
 
         emit RewardsClaimed(msg.sender, totalRewards);
     }
@@ -239,13 +241,13 @@ contract StakingManager is AccessControl, ReentrancyGuard, Pausable {
     ////        GETTER FUNCTIONS        ///
     ///////////////////////////////////////
 
-    /// @notice Get the balance of PI tokens held by the staking contract
-    /// @return The balance of PI tokens held by this contract
+    /// @notice Get the balance of ASI tokens held by the staking contract
+    /// @return The balance of ASI tokens held by this contract
     function getContractBalance() external view returns (uint256) {
-        return PI.balanceOf(address(this));
+        return ASI.balanceOf(address(this));
     }
 
-    /// @notice Get the balance of PI tokens staked by compute node account
+    /// @notice Get the balance of ASI tokens staked by compute node account
     function getComputeNodeBalance(
         address account
     ) external view returns (uint256) {

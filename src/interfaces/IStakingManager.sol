@@ -8,15 +8,15 @@ interface IStakingManager {
     event RewardsClaimed(address indexed account, uint256 amount);
     event AttestationRecorded(address indexed account, uint256 trainingRunId);
 
-    /// @notice Stake a specified amount of PI tokens
-    /// @param _amount The amount of PI tokens to stake
+    /// @notice Stake a specified amount of ASI tokens
+    /// @param _amount The amount of ASI tokens to stake
     function stake(uint256 _amount) external;
 
-    /// @notice Withdraw a specified amount of staked PI tokens
-    /// @param _amount The amount of PI tokens to withdraw
+    /// @notice Withdraw a specified amount of staked ASI tokens
+    /// @param _amount The amount of ASI tokens to withdraw
     function withdraw(uint256 _amount) external;
 
-    /// @notice Slash a specific account, reducing its staked PI tokens
+    /// @notice Slash a specific account, reducing its staked ASI tokens
     /// @param _account The address of the account to slash
     /// @param _amount The amount of tokens to slash
     function slash(address _account, uint256 _amount) external;
@@ -34,8 +34,8 @@ interface IStakingManager {
     /// @param trainingRunId The ID of the training run
     function recordAttestation(address account, uint256 trainingRunId) external;
 
-    /// @notice Get the balance of PI tokens held by the staking contract
-    /// @return The balance of PI tokens held by this contract
+    /// @notice Get the balance of ASI tokens held by the staking contract
+    /// @return The balance of ASI tokens held by this contract
     function getContractBalance() external view returns (uint256);
 
     /// @notice Get the staked balance of a compute node

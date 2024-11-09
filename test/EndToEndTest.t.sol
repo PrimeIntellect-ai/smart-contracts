@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "../src/StakingManager.sol";
-import "../src/PrimeIntellectToken.sol";
+import "../src/AsimovToken.sol";
 import "../src/TrainingManager.sol";
 import "../src/interfaces/IStakingManager.sol";
 import "../src/interfaces/ITrainingManager.sol";
@@ -13,7 +13,7 @@ import "../src/interfaces/ITrainingManager.sol";
 contract EndToEndTest is Test {
     StakingManager public stakingManager;
     TrainingManager public trainingManager;
-    PrimeIntellectToken public PI;
+    AsimovToken public ASI;
 
     // create our users
     address public admin = address(1);
@@ -27,12 +27,12 @@ contract EndToEndTest is Test {
         vm.startPrank(admin);
 
         // deploy token contract
-        PI = new PrimeIntellectToken("Prime Intellect Token", "PI");
+        ASI = new AsimovToken("Prime Intellect Token", "ASI");
         // deploy training manager
         trainingManager = new TrainingManager();
         // deploy staking manager
         stakingManager = new StakingManager(
-            address(PI),
+            address(ASI),
             address(trainingManager)
         );
 
@@ -42,9 +42,9 @@ contract EndToEndTest is Test {
 
         // issue tokens to our compute nodes
         // admin has minter role by default
-        PI.mint(computeNode, INITIAL_SUPPLY);
-        PI.mint(computeNode2, INITIAL_SUPPLY);
-        PI.mint(computeNode3, INITIAL_SUPPLY);
+        ASI.mint(computeNode, INITIAL_SUPPLY);
+        ASI.mint(computeNode2, INITIAL_SUPPLY);
+        ASI.mint(computeNode3, INITIAL_SUPPLY);
         vm.stopPrank();
     }
 
@@ -61,7 +61,7 @@ contract EndToEndTest is Test {
 
         // first compute node stakes
         vm.startPrank(computeNode);
-        PI.approve(address(stakingManager), minStake);
+        ASI.approve(address(stakingManager), minStake);
         stakingManager.stake(minStake);
 
         assertEq(

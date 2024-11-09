@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 
 import {Test, console} from "forge-std/Test.sol";
 import "../src/StakingManager.sol";
-import "../src/PrimeIntellectToken.sol";
+import "../src/AsimovToken.sol";
 import "../src/TrainingManager.sol";
 
 /////////////////////////////////////////
@@ -14,7 +14,7 @@ import "../src/TrainingManager.sol";
 contract StakingManagerTest is Test {
     StakingManager public stakingManager;
     TrainingManager public trainingManager;
-    PrimeIntellectToken public PI;
+    AsimovToken public ASI;
 
     address public admin = address(1);
     address public computeNode = address(2);
@@ -26,16 +26,16 @@ contract StakingManagerTest is Test {
     function setUp() public {
         vm.startPrank(admin);
 
-        PI = new PrimeIntellectToken("Prime-Intellect-Token", "PI");
+        ASI = new AsimovToken("Asimov-Token", "ASI");
         trainingManager = new TrainingManager();
-        stakingManager = new StakingManager(address(PI), address(trainingManager));
+        stakingManager = new StakingManager(address(ASI), address(trainingManager));
 
-        PI.grantRole(PI.MINTER_ROLE(), address(stakingManager));
+        ASI.grantRole(ASI.MINTER_ROLE(), address(stakingManager));
         // Set the StakingManager address in TrainingManager
         trainingManager.setStakingManager(address(stakingManager));
 
-        PI.approve(computeNode, INITIAL_SUPPLY);
-        PI.mint(computeNode, INITIAL_SUPPLY);
+        ASI.approve(computeNode, INITIAL_SUPPLY);
+        ASI.mint(computeNode, INITIAL_SUPPLY);
         trainingManager.whitelistComputeNode(computeNode);
         vm.stopPrank();
     }
@@ -83,7 +83,7 @@ contract StakingManagerTest is Test {
 
         // staking
         vm.startPrank(computeNode);
-        PI.approve(address(stakingManager), stakeAmount);
+        ASI.approve(address(stakingManager), stakeAmount);
 
         stakingManager.stake(stakeAmount);
         vm.stopPrank();
@@ -98,14 +98,14 @@ contract StakingManagerTest is Test {
 
         vm.warp(block.timestamp + 8 days);
 
-        uint256 initialBalance = PI.balanceOf(computeNode);
+        uint256 initialBalance = ASI.balanceOf(computeNode);
 
         vm.prank(computeNode);
 
         stakingManager.claim();
 
         uint256 expectedRewards = 23 * REWARD_RATE; // 10 + 5 + 8
-        uint256 finalBalance = PI.balanceOf(computeNode);
+        uint256 finalBalance = ASI.balanceOf(computeNode);
         assertEq(finalBalance, initialBalance + expectedRewards, "Incorrect rewards claimed");
     }
 }
