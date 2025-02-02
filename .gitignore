@@ -1,3 +1,7 @@
+
+release/*
+.vscode/*
+
 # Compiler files
 cache/
 out/
