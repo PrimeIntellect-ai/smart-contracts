@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-abstract contract IWorkValidation {
-    function validateWork(uint256 domainId, uint256 jobId, address provider, uint256 nodeId, bytes calldata data)
+interface IWorkValidation {
+    function submitWork(uint256 _domainId, uint256 poolId, address provider, address nodeId, bytes calldata data)
         external
-        virtual
         returns (bool);
+
+    function invalidateWork(uint256 poolId, bytes calldata data) external returns (address, address);
 }

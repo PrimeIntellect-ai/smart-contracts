@@ -177,6 +177,11 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
             require(!poolStates[poolId].blacklistedNodes[nodekey[i]], "ComputePool: node is blacklisted");
         }
 
+        require(
+            computeRegistry.getWhitelistStatus(provider),
+            "ComputePool: provider has not been allowed to join pools by federator"
+        );
+
         if (!poolStates[poolId].poolProviders.contains(provider)) {
             poolStates[poolId].poolProviders.add(provider);
         }
@@ -287,6 +292,39 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
         _joinComputePool(toPoolId, provider, nodekeys, signatures);
     }
 
+    function submitWork(uint256 poolId, address node, bytes calldata data) external onlyExistingPool(poolId) {
+        address provider = msg.sender;
+
+        require(poolStates[poolId].poolNodes.contains(node), "ComputePool: node not in pool");
+        require(computeRegistry.getNodeProvider(node) == provider, "ComputePool: node not owned by provider");
+        require(pools[poolId].status == PoolStatus.ACTIVE, "ComputePool: dest pool is not ready");
+        require(!poolStates[poolId].blacklistedNodes[node], "ComputePool: node is blacklisted");
+        require(!poolStates[poolId].blacklistedProviders[provider], "ComputePool: provider is blacklisted");
+        require(
+            computeRegistry.getWhitelistStatus(provider),
+            "ComputePool: provider has not been allowed to join pools by federator"
+        );
+
+        IDomainRegistry.Domain memory domainInfo = domainRegistry.get(pools[poolId].domainId);
+        IWorkValidation workValidation = IWorkValidation(domainInfo.validationLogic);
+        workValidation.submitWork(pools[poolId].domainId, poolId, provider, node, data);
+    }
+
+    function invalidateWork(uint256 poolId, bytes calldata data)
+        external
+        onlyExistingPool(poolId)
+        onlyRole(PRIME_ROLE)
+        returns (address, address)
+    {
+        IDomainRegistry.Domain memory domainInfo = domainRegistry.get(pools[poolId].domainId);
+        IWorkValidation workValidation = IWorkValidation(domainInfo.validationLogic);
+        (address provider, address node) = workValidation.invalidateWork(poolId, data);
+        if (poolStates[poolId].poolNodes.contains(node)) {
+            _ejectNode(poolId, node);
+        }
+        return (provider, node);
+    }
+
     //
     // Management functions
     //
@@ -310,13 +348,7 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
         emit ComputePoolLimitUpdated(poolId, computeLimit);
     }
 
-    function ejectNode(uint256 poolId, address nodekey)
-        external
-        onlyExistingPool(poolId)
-        onlyPoolCreatorOrManager(poolId)
-    {
-        require(poolStates[poolId].poolNodes.contains(nodekey), "ComputePool: node not in pool");
-
+    function _ejectNode(uint256 poolId, address nodekey) internal {
         (address node_provider, uint32 computeUnits,,) = computeRegistry.getNodeContractData(nodekey);
         _removeNode(poolId, node_provider, nodekey, computeUnits);
 
@@ -325,6 +357,15 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
         }
 
         emit ComputePoolNodeEjected(poolId, node_provider, nodekey);
+    }
+
+    function ejectNode(uint256 poolId, address nodekey)
+        external
+        onlyExistingPool(poolId)
+        onlyPoolCreatorOrManager(poolId)
+    {
+        require(poolStates[poolId].poolNodes.contains(nodekey), "ComputePool: node not in pool");
+        _ejectNode(poolId, nodekey);
     }
 
     function _blacklistProvider(uint256 poolId, address provider) internal {
