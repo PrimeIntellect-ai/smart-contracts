@@ -111,6 +111,12 @@ contract PrimeNetworkTest is Test {
         primeNetwork.registerProvider(providerStake);
     }
 
+    function addProviderWithStake(address provider, uint256 amount) public {
+        vm.startPrank(provider);
+        AI.approve(address(primeNetwork), amount);
+        primeNetwork.registerProvider(amount);
+    }
+
     function removeProvider(address provider) public {
         vm.startPrank(provider);
         primeNetwork.deregisterProvider(provider);
@@ -122,6 +128,14 @@ contract PrimeNetworkTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(node_sk, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
         primeNetwork.addComputeNode(node, "ipfs://nodekey/", computeUnitsPerNode, signature);
+    }
+
+    function addNodeWithCompute(address provider, address node, uint256 node_sk, uint256 computeUnits) public {
+        vm.startPrank(provider);
+        bytes32 digest = keccak256(abi.encodePacked(provider, node)).toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(node_sk, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        primeNetwork.addComputeNode(node, "ipfs://nodekey/", computeUnits, signature);
     }
 
     function removeNode(address provider, address node) public {
@@ -152,6 +166,17 @@ contract PrimeNetworkTest is Test {
     function withdrawStake(address provider) public {
         vm.startPrank(provider);
         stakeManager.withdraw();
+    }
+
+    function increaseStake(address provider, uint256 amount) public {
+        vm.startPrank(provider);
+        AI.approve(address(primeNetwork), amount);
+        primeNetwork.increaseStake(amount);
+    }
+
+    function reclaimStake(address provider, uint256 amount) public {
+        vm.startPrank(provider);
+        primeNetwork.reclaimStake(amount);
     }
 
     function slashProvider(address provider, uint256 amount) public {
@@ -641,5 +666,67 @@ contract PrimeNetworkTest is Test {
         bytes[] memory signatures = new bytes[](1);
         signatures[0] = signature_invite;
         computePool.joinComputePool(poolId, provider_good1, nodes, signatures);
+    }
+
+    function test_stakeOps() public {
+        uint256 domain = newDomain("Decentralized Training", "https://primeintellect.ai/training/params");
+        uint256 pool = newPool(domain, "INTELLECT-1", "https://primeintellect.ai/pools/intellect-1");
+
+        uint256 startingBalance = AI.balanceOf(provider_good1);
+        uint256 minStakeNow = stakeManager.getStakeMinimum();
+        uint256 nodeComputeUnits = 1000;
+
+        startPool(pool);
+
+        addProviderWithStake(provider_good1, minStakeNow);
+        whitelistProvider(provider_good1);
+
+        // should fail because we don't have enough stake for the new compute units
+        vm.expectRevert();
+        addNodeWithCompute(provider_good1, node_good1, node_good1_sk, nodeComputeUnits);
+
+        // add stake with some extra
+        increaseStake(provider_good1, nodeComputeUnits * 2 * minStakeNow);
+        addNodeWithCompute(provider_good1, node_good1, node_good1_sk, nodeComputeUnits);
+
+        // ensure that the stake is locked by the compute units
+        uint256 computeLockedStake = primeNetwork.calculateMinimumStake(provider_good1, 0);
+        assertEq(computeLockedStake, (nodeComputeUnits * minStakeNow) + minStakeNow);
+
+        uint256 currentStaked = stakeManager.getStake(provider_good1);
+
+        console.log("Current staked:", currentStaked);
+        console.log("Compute locked stake:", computeLockedStake);
+        console.log("Current balance:", AI.balanceOf(provider_good1));
+
+        // try to reclaim more than unallocated stake
+        vm.expectRevert();
+        reclaimStake(provider_good1, (currentStaked - computeLockedStake) + 1);
+
+        // reclaim all unallocated stake
+        reclaimStake(provider_good1, 0);
+        skip(stakeManager.getUnbondingPeriod() + 10);
+        withdrawStake(provider_good1);
+        assertEq(AI.balanceOf(provider_good1), startingBalance - computeLockedStake);
+
+        validateNode(provider_good1, node_good1);
+        nodeJoin(domain, pool, provider_good1, node_good1);
+        nodeLeaveAll(pool, provider_good1);
+
+        // frees up stake locked by compute units
+        removeNode(provider_good1, node_good1);
+
+        // check that stake is now back to provider minimum
+        computeLockedStake = primeNetwork.calculateMinimumStake(provider_good1, 0);
+        assertEq(computeLockedStake, minStakeNow);
+
+        // should succeed now that provider has no nodes
+        // this also automatically calls unstake internally
+        removeProvider(provider_good1);
+
+        skip(stakeManager.getUnbondingPeriod() + 10);
+
+        withdrawStake(provider_good1);
+        assertEq(AI.balanceOf(provider_good1), startingBalance);
     }
 }

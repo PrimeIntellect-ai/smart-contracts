@@ -104,12 +104,24 @@ contract PrimeNetwork is AccessControlEnumerable {
         emit ProviderRegistered(provider, stake);
     }
 
-    function increaseStake(uint256 additionalStake) external {
+    function increaseStake(uint256 amount) external {
         address provider = msg.sender;
         require(computeRegistry.checkProviderExists(provider), "Provider not registered");
-        AIToken.transferFrom(msg.sender, address(this), additionalStake);
-        AIToken.approve(address(stakeManager), additionalStake);
-        stakeManager.stake(provider, additionalStake);
+        AIToken.transferFrom(msg.sender, address(this), amount);
+        AIToken.approve(address(stakeManager), amount);
+        stakeManager.stake(provider, amount);
+    }
+
+    function reclaimStake(uint256 amount) external {
+        address provider = msg.sender;
+        uint256 providerStake = stakeManager.getStake(provider);
+        uint256 minComputeStake = calculateMinimumStake(provider, 0);
+        require(providerStake - amount >= minComputeStake, "Cannot unstake more than unallocated stake");
+        // if amount is 0, unstake all that is currently not allocated to compute units
+        if (amount == 0) {
+            amount = providerStake - minComputeStake;
+        }
+        stakeManager.unstake(provider, amount);
     }
 
     function registerProviderWithPermit(uint256 stake, uint256 deadline, bytes memory signature) external {
@@ -191,6 +203,7 @@ contract PrimeNetwork is AccessControlEnumerable {
         uint256 providerTotalCompute = computeRegistry.getProviderTotalCompute(provider);
         uint256 minStakePerComputeUnit = stakeManager.getStakeMinimum();
         uint256 requiredStake = (providerTotalCompute + computeUnits) * minStakePerComputeUnit;
-        return requiredStake;
+        // add minStakePerComputeUnit to account for the provider's base stake
+        return requiredStake + minStakePerComputeUnit;
     }
 }
