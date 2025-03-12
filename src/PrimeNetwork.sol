@@ -104,6 +104,14 @@ contract PrimeNetwork is AccessControlEnumerable {
         emit ProviderRegistered(provider, stake);
     }
 
+    function increaseStake(uint256 additionalStake) external {
+        address provider = msg.sender;
+        require(computeRegistry.checkProviderExists(provider), "Provider not registered");
+        AIToken.transferFrom(msg.sender, address(this), additionalStake);
+        AIToken.approve(address(stakeManager), additionalStake);
+        stakeManager.stake(provider, additionalStake);
+    }
+
     function registerProviderWithPermit(uint256 stake, uint256 deadline, bytes memory signature) external {
         uint256 stakeMinimum = stakeManager.getStakeMinimum();
         require(stake >= stakeMinimum, "Stake amount is below minimum");
