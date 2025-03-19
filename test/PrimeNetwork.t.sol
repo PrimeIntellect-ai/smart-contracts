@@ -775,18 +775,15 @@ contract PrimeNetworkTest is Test {
         uint256 stake = stakeManager.getStake(provider_good1);
         vm.startPrank(validator);
         primeNetwork.invalidateWork(pool, stake, work_id);
-        console.log("Stake should now be zero:", stake);
-        // primeNetwork.slash(provider_good1, stake, "bad action");
+
+        // check that stake has been slashed to 0
+        assertEq(stakeManager.getStake(provider_good1), 0);
 
         // check that provider is now blacklisted
         assertEq(computeRegistry.getProvider(provider_good1).isWhitelisted, false);
 
-        vm.startPrank(provider_good1);
         // check that provider is not allowed to add new nodes to the pool
         vm.expectRevert();
         nodeJoin(domain, pool, provider_good1, node_good1);
-
-        // check that stake is now zero
-        assertEq(stakeManager.getStake(provider_good1), 0);
     }
 }
