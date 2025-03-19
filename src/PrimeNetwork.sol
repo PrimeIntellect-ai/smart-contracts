@@ -92,6 +92,10 @@ contract PrimeNetwork is AccessControlEnumerable {
         return domainId;
     }
 
+    function updateDomainValidationLogic(uint256 domainId, address validationLogic) external onlyRole(FEDERATOR_ROLE) {
+        domainRegistry.updateValidationLogic(domainId, validationLogic);
+    }
+
     function registerProvider(uint256 stake) external {
         uint256 stakeMinimum = stakeManager.getStakeMinimum();
         require(stake >= stakeMinimum, "Stake amount is below minimum");
@@ -168,19 +172,24 @@ contract PrimeNetwork is AccessControlEnumerable {
         emit ComputeNodeRemoved(provider, nodekey);
     }
 
-    function slash(address provider, uint256 amount, bytes calldata reason) external onlyRole(VALIDATOR_ROLE) {
-        uint256 slashed = stakeManager.slash(provider, amount, reason);
-        AIToken.transfer(msg.sender, slashed);
+    function _blacklistIfStakeTooLow(address provider) internal {
         if (stakeManager.getStake(provider) < calculateMinimumStake(provider, 0)) {
             computeRegistry.setWhitelistStatus(provider, false);
             emit ProviderBlacklisted(provider);
         }
     }
 
+    function slash(address provider, uint256 amount, bytes calldata reason) external onlyRole(VALIDATOR_ROLE) {
+        uint256 slashed = stakeManager.slash(provider, amount, reason);
+        AIToken.transfer(msg.sender, slashed);
+        _blacklistIfStakeTooLow(provider);
+    }
+
     function invalidateWork(uint256 poolId, uint256 penalty, bytes calldata data) external onlyRole(VALIDATOR_ROLE) {
         (address provider, address node) = computePool.invalidateWork(poolId, data);
-        try stakeManager.slash(provider, penalty, data) {}
-        catch {
+        try stakeManager.slash(provider, penalty, data) {
+            _blacklistIfStakeTooLow(provider);
+        } catch {
             // if slashing failed for whatever reason, blacklist provider to make sure they can't submit more work
             computeRegistry.setWhitelistStatus(provider, false);
             emit ProviderBlacklisted(provider);

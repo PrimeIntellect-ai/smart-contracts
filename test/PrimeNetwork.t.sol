@@ -16,6 +16,7 @@ import {RewardsDistributorFactory} from "../src/RewardsDistributorFactory.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {SyntheticDataWorkValidator} from "../src/SyntheticDataWorkValidator.sol";
 
 contract PrimeNetworkTest is Test {
     using ECDSA for bytes32;
@@ -187,6 +188,14 @@ contract PrimeNetworkTest is Test {
     function newDomain(string memory name, string memory uri) public returns (uint256) {
         vm.startPrank(federator);
         return primeNetwork.createDomain(name, IWorkValidation(address(0)), uri);
+    }
+
+    function newDomainWithValidation(string memory name, string memory uri, address workValidator)
+        public
+        returns (uint256)
+    {
+        vm.startPrank(federator);
+        return primeNetwork.createDomain(name, IWorkValidation(workValidator), uri);
     }
 
     function newPool(uint256 domainId, string memory name, string memory uri) public returns (uint256) {
@@ -728,5 +737,56 @@ contract PrimeNetworkTest is Test {
 
         withdrawStake(provider_good1);
         assertEq(AI.balanceOf(provider_good1), startingBalance);
+    }
+
+    function test_stakeBlacklisting() public {
+        uint256 domain = newDomain("Decentralized Training", "https://primeintellect.ai/training/params");
+        uint256 pool = newPool(domain, "INTELLECT-1", "https://primeintellect.ai/pools/intellect-1");
+
+        SyntheticDataWorkValidator workValidator = new SyntheticDataWorkValidator(domain, address(computePool), 1 days);
+
+        vm.startPrank(federator);
+        primeNetwork.updateDomainValidationLogic(domain, address(workValidator));
+
+        uint256 minStakeNow = stakeManager.getStakeMinimum();
+        uint256 nodeComputeUnits = 1000;
+
+        bytes memory work_id = hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+        startPool(pool);
+
+        addProviderWithStake(provider_good1, minStakeNow);
+        whitelistProvider(provider_good1);
+
+        // add stake with some extra
+        increaseStake(provider_good1, nodeComputeUnits * 2 * minStakeNow);
+        addNodeWithCompute(provider_good1, node_good1, node_good1_sk, nodeComputeUnits);
+
+        // ensure that the stake is locked by the compute units
+        uint256 computeLockedStake = primeNetwork.calculateMinimumStake(provider_good1, 0);
+        assertEq(computeLockedStake, (nodeComputeUnits * minStakeNow) + minStakeNow);
+
+        validateNode(provider_good1, node_good1);
+        nodeJoin(domain, pool, provider_good1, node_good1);
+
+        computePool.submitWork(pool, node_good1, work_id);
+
+        // slash provider
+        uint256 stake = stakeManager.getStake(provider_good1);
+        vm.startPrank(validator);
+        primeNetwork.invalidateWork(pool, stake, work_id);
+        console.log("Stake should now be zero:", stake);
+        // primeNetwork.slash(provider_good1, stake, "bad action");
+
+        // check that provider is now blacklisted
+        assertEq(computeRegistry.getProvider(provider_good1).isWhitelisted, false);
+
+        vm.startPrank(provider_good1);
+        // check that provider is not allowed to add new nodes to the pool
+        vm.expectRevert();
+        nodeJoin(domain, pool, provider_good1, node_good1);
+
+        // check that stake is now zero
+        assertEq(stakeManager.getStake(provider_good1), 0);
     }
 }
