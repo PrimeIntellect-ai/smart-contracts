@@ -200,7 +200,7 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
             );
             uint256 addedCompute = pools[poolId].totalCompute + computeUnits;
             if (pools[poolId].computeLimit > 0) {
-                require(addedCompute < pools[poolId].computeLimit, "ComputePool: pool is at capacity");
+                require(addedCompute <= pools[poolId].computeLimit, "ComputePool: pool is at capacity");
             }
             _addNode(poolId, provider, nodekey[i], computeUnits);
         }
