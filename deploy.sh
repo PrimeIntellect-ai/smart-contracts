@@ -19,3 +19,4 @@ forge inspect --via-ir --json DomainRegistry abi > ./release/domain_registry.jso
 forge inspect --via-ir --json PrimeNetwork abi > ./release/prime_network.json
 forge inspect --via-ir --json StakeManager abi > ./release/stake_manager.json
 forge inspect --via-ir --json RewardsDistributorFixed abi > ./release/rewards_distributor.json
+forge inspect --via-ir --json RewardsDistributorWorkSubmission abi > ./release/rewards_distributor_work_submission.json
