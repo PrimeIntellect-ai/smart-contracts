@@ -284,6 +284,8 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
         require(pools[toPoolId].status == PoolStatus.ACTIVE, "ComputePool: dest pool is not ready");
         address provider = msg.sender;
 
+        require(!poolStates[toPoolId].blacklistedProviders[provider], "ComputePool: provider is blacklisted");
+
         if (nodekeys.length == poolStates[fromPoolId].providerActiveNodes[provider]) {
             // If all nodes are being moved, just move the provider
             _leaveComputePool(fromPoolId, provider, new address[](0));

@@ -208,7 +208,7 @@ contract PrimeNetworkTest is Test {
         computePool.startComputePool(poolId);
     }
 
-    function nodeJoin(uint256 domainId, uint256 poolId, address provider, address node) public {
+    function nodeJoin(uint256 domainId, uint256 poolId, address provider, address node) public returns (address[] memory, bytes[] memory) {
         bytes32 digest = keccak256(abi.encodePacked(domainId, poolId, node)).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(computeManager_sk, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -218,6 +218,7 @@ contract PrimeNetworkTest is Test {
         nodes[0] = node;
         signatures[0] = signature;
         computePool.joinComputePool(poolId, provider, nodes, signatures);
+        return (nodes, signatures);
     }
 
     function nodeJoinMultiple(uint256 domainId, uint256 poolId, address provider, address[] memory nodes) public {
@@ -821,5 +822,42 @@ contract PrimeNetworkTest is Test {
         // make sure that we cannot leave with a node that has never joined
         vm.expectRevert();
         nodeLeave(pool, provider_good1, node_good2);
+    }
+
+    function test_providerBlacklist() public {
+        uint256 domain = newDomain("Decentralized Training", "https://primeintellect.ai/training/params");
+        uint256 pool1 = newPool(domain, "INTELLECT-1", "https://primeintellect.ai/pools/intellect-1");
+        uint256 pool2 = newPool(domain, "INTELLECT-2", "https://primeintellect.ai/pools/intellect-2");
+        bytes memory providerBlacklistError = bytes("ComputePool: provider is blacklisted");
+
+        addProvider(provider_good1);
+        whitelistProvider(provider_good1);
+
+        addNode(provider_good1, node_good1, node_good1_sk);
+
+        validateNode(provider_good1, node_good1);
+
+        assertEq(computeRegistry.getNode(provider_good1, node_good1).subkey, node_good1);
+
+        startPool(pool1);
+
+        (address[] memory nodes, bytes[] memory signatures) = nodeJoin(domain, pool1, provider_good1, node_good1);
+
+        assertEq(isNodeInPool(pool1, node_good1), true);
+
+        vm.startPrank(pool_creator);
+        computePool.blacklistAndPurgeProvider(pool1, provider_good1);
+
+        vm.startPrank(provider_good1);
+        vm.expectRevert(providerBlacklistError);
+        computePool.joinComputePool(pool1, provider_good1, nodes, signatures);
+
+        startPool(pool2);
+
+        nodeJoin(domain, pool2, provider_good1, node_good1);
+
+        vm.startPrank(provider_good1);
+        vm.expectRevert(providerBlacklistError);
+        computePool.changeComputePool(pool2, pool1, nodes, signatures);
     }
 }
