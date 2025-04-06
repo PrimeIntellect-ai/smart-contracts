@@ -236,7 +236,7 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
         require(rewardRatePerUnit == 0, "Rate can only be set once");
         rewardRatePerUnit = newRate;
     }
-    
+
     function getRewardRate() external view returns (uint256) {
         return rewardRatePerUnit;
     }

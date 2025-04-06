@@ -87,7 +87,7 @@ contract RewardsDistributorFixed is IRewardsDistributor, AccessControlEnumerable
         _updateGlobalIndex();
         rewardRatePerSecond = newRate;
     }
-    
+
     // Get the current reward rate
     function getRewardRate() external view returns (uint256) {
         return rewardRatePerSecond;
