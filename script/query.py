@@ -189,7 +189,7 @@ class ChainReader:
             "call",
             "--rpc-url", self.rpc_url,
             reward_distributor,
-            "rewardRatePerSecond()(uint256)"
+            "getRewardRate()(uint256)"
         ]
         return self._run_cast_command(args)
 
