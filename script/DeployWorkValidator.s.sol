@@ -27,7 +27,6 @@ contract DeployWorkValidatorScript is Script {
 
         // Log deployed address
         console.log("Deployed SyntheticDataWorkValidator:", address(workValidator));
-   
 
         string memory finalJson = vm.serializeAddress("contracts", "work_validator", address(workValidator));
         vm.writeJson(finalJson, "./release/synthetic_data_work_validator.json");

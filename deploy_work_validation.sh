@@ -5,10 +5,17 @@ if [ -z "$RPC_URL" ]; then
   export RPC_URL="http://localhost:8545"
 fi
 
-export PRIVATE_KEY_FEDERATOR="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+if [ -z "$COMPUTE_POOL_ADDRESS" ]; then
+  export COMPUTE_POOL_ADDRESS=0x610178dA211FEF7D417bC0e6FeD39F05609AD788
+fi
 
-export DOMAIN_ID=0
-export COMPUTE_POOL_ADDRESS=$COMPUTE_POOL_ADDRESS
+if [ -z "$DOMAIN_ID" ]; then
+  export DOMAIN_ID=0
+fi
+
+if [ -z "$PRIVATE_KEY_FEDERATOR" ]; then
+  export PRIVATE_KEY_FEDERATOR="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+fi
 
 forge script script/DeployWorkValidator.s.sol:DeployWorkValidatorScript --rpc-url $RPC_URL --broadcast --via-ir
 
