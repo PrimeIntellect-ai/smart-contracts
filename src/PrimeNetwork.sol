@@ -70,6 +70,9 @@ contract PrimeNetwork is AccessControlEnumerable {
     }
 
     function validateNode(address provider, address nodekey) external onlyRole(VALIDATOR_ROLE) {
+        uint256 requiredStake = calculateMinimumStake(provider, 0);
+        uint256 providerStake = stakeManager.getStake(provider);
+        require(providerStake >= requiredStake, "Insufficient stake");
         computeRegistry.setNodeValidationStatus(provider, nodekey, true);
         emit ComputeNodeValidated(provider, nodekey);
     }
@@ -166,10 +169,14 @@ contract PrimeNetwork is AccessControlEnumerable {
         emit ComputeNodeAdded(provider, nodekey, specsURI);
     }
 
-    function removeComputeNode(address provider, address nodekey) external {
-        require(hasRole(VALIDATOR_ROLE, msg.sender) || msg.sender == provider, "Unauthorized");
+    function _removeComputeNode(address provider, address nodekey) internal {
         computeRegistry.removeComputeNode(provider, nodekey);
         emit ComputeNodeRemoved(provider, nodekey);
+    }
+
+    function removeComputeNode(address provider, address nodekey) external {
+        require(hasRole(VALIDATOR_ROLE, msg.sender) || msg.sender == provider, "Unauthorized");
+        _removeComputeNode(provider, nodekey);
     }
 
     function _blacklistIfStakeTooLow(address provider) internal {
@@ -199,6 +206,11 @@ contract PrimeNetwork is AccessControlEnumerable {
         // than an extra contract call just to check existence
         try computeRegistry.setNodeValidationStatus(provider, node, false) {
             emit ComputeNodeInvalidated(provider, node);
+            // just be extra safe so that this doesn't revert if node is in a different pool
+        } catch {}
+
+        try computeRegistry.removeComputeNode(provider, node) {
+            emit ComputeNodeRemoved(provider, node);
         } catch {}
     }
 
