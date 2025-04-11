@@ -166,10 +166,14 @@ contract PrimeNetwork is AccessControlEnumerable {
         emit ComputeNodeAdded(provider, nodekey, specsURI);
     }
 
-    function removeComputeNode(address provider, address nodekey) external {
-        require(hasRole(VALIDATOR_ROLE, msg.sender) || msg.sender == provider, "Unauthorized");
+    function _removeComputeNode(address provider, address nodekey) internal {
         computeRegistry.removeComputeNode(provider, nodekey);
         emit ComputeNodeRemoved(provider, nodekey);
+    }
+
+    function removeComputeNode(address provider, address nodekey) external {
+        require(hasRole(VALIDATOR_ROLE, msg.sender) || msg.sender == provider, "Unauthorized");
+        _removeComputeNode(provider, nodekey);
     }
 
     function _blacklistIfStakeTooLow(address provider) internal {
@@ -199,6 +203,7 @@ contract PrimeNetwork is AccessControlEnumerable {
         // than an extra contract call just to check existence
         try computeRegistry.setNodeValidationStatus(provider, node, false) {
             emit ComputeNodeInvalidated(provider, node);
+            _removeComputeNode(provider, node);
         } catch {}
     }
 
