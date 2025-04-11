@@ -12,6 +12,10 @@ contract DeployWorkValidatorScript is Script {
         uint256 domainId = vm.envUint("DOMAIN_ID");
         address computePool = vm.envAddress("COMPUTE_POOL_ADDRESS");
         uint256 workValidityPeriod = 1 days;
+        console.log("Configuration:");
+        console.log("  Domain ID:", domainId);
+        console.log("  Compute Pool:", computePool);
+        console.log("  Work Validity Period:", workValidityPeriod);
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -23,10 +27,7 @@ contract DeployWorkValidatorScript is Script {
 
         // Log deployed address
         console.log("Deployed SyntheticDataWorkValidator:", address(workValidator));
-        console.log("Configuration:");
-        console.log("  Domain ID:", domainId);
-        console.log("  Compute Pool:", computePool);
-        console.log("  Work Validity Period:", workValidityPeriod);
+   
 
         string memory finalJson = vm.serializeAddress("contracts", "work_validator", address(workValidator));
         vm.writeJson(finalJson, "./release/synthetic_data_work_validator.json");
