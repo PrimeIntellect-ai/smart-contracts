@@ -207,9 +207,10 @@ contract PrimeNetwork is AccessControlEnumerable {
         try computeRegistry.setNodeValidationStatus(provider, node, false) {
             emit ComputeNodeInvalidated(provider, node);
             // just be extra safe so that this doesn't revert if node is in a different pool
-            try computeRegistry.removeComputeNode(provider, node) {
-                emit ComputeNodeRemoved(provider, node);
-            } catch {}
+        } catch {}
+
+        try computeRegistry.removeComputeNode(provider, node) {
+            emit ComputeNodeRemoved(provider, node);
         } catch {}
     }
 

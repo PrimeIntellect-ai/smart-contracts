@@ -792,6 +792,9 @@ contract PrimeNetworkTest is Test {
         vm.startPrank(validator);
         primeNetwork.invalidateWork(pool, stake, work_id);
 
+        // check that node has been ejected from the pool
+        assertEq(isNodeInPool(pool, node_good1), false);
+
         // check that stake has been slashed to 0
         assertEq(stakeManager.getStake(provider_good1), 0);
 
