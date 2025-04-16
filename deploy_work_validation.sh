@@ -5,10 +5,6 @@ if [ -z "$RPC_URL" ]; then
   export RPC_URL="http://localhost:8545"
 fi
 
-if [ -z "$COMPUTE_POOL_ADDRESS" ]; then
-  export COMPUTE_POOL_ADDRESS=0x610178dA211FEF7D417bC0e6FeD39F05609AD788
-fi
-
 if [ -z "$DOMAIN_ID" ]; then
   export DOMAIN_ID=0
 fi

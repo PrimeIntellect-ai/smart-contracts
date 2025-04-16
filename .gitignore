@@ -1,6 +1,7 @@
 
 release/*
 .vscode/*
+broadcast/*
 
 # Compiler files
 cache/

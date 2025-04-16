@@ -3,14 +3,19 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
 import "../src/SyntheticDataWorkValidator.sol";
+import "./deployment_util.sol";
 
-contract DeployWorkValidatorScript is Script {
+contract DeployWorkValidatorScript is DeploymentUtil {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_FEDERATOR");
+        string memory deploymentsFile = "./release/deployments.json";
 
+        Deployments memory deployments = getDeployments(deploymentsFile);
+
+        logDeployments(deployments);
         // Get configuration from environment variables
         uint256 domainId = vm.envUint("DOMAIN_ID");
-        address computePool = vm.envAddress("COMPUTE_POOL_ADDRESS");
+        address computePool = deployments.ComputePool;
         uint256 workValidityPeriod = 1 days;
         console.log("Configuration:");
         console.log("  Domain ID:", domainId);
@@ -25,10 +30,12 @@ contract DeployWorkValidatorScript is Script {
 
         vm.stopBroadcast();
 
+        deployments.WorkValidator = address(workValidator);
+
         // Log deployed address
         console.log("Deployed SyntheticDataWorkValidator:", address(workValidator));
 
-        string memory finalJson = vm.serializeAddress("contracts", "work_validator", address(workValidator));
-        vm.writeJson(finalJson, "./release/synthetic_data_work_validator.json");
+        // keep these in the same order as in the Deploy script
+        writeDeployments(deployments, deploymentsFile);
     }
 }
