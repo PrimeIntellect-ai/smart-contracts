@@ -45,14 +45,14 @@ contract PrimeNetwork is AccessControlEnumerable {
         computeRegistry.setComputePool(address(computePool));
     }
 
-    function setFederator(address _federator) external onlyRole(FEDERATOR_ROLE) {
+    function setFederator(address _federator) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        revokeRole(FEDERATOR_ROLE, getRoleMember(FEDERATOR_ROLE, 0));
         grantRole(FEDERATOR_ROLE, _federator);
-        revokeRole(FEDERATOR_ROLE, msg.sender);
     }
 
-    function setValidator(address _validator) external onlyRole(FEDERATOR_ROLE) {
+    function setValidator(address _validator) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        revokeRole(VALIDATOR_ROLE, getRoleMember(VALIDATOR_ROLE, 0));
         grantRole(VALIDATOR_ROLE, _validator);
-        revokeRole(VALIDATOR_ROLE, msg.sender);
     }
 
     function whitelistProvider(address provider) external {
@@ -99,16 +99,21 @@ contract PrimeNetwork is AccessControlEnumerable {
         domainRegistry.updateValidationLogic(domainId, validationLogic);
     }
 
-    function registerProvider(uint256 stake) external {
+    function registerProvider(uint256 stake) public {
         uint256 stakeMinimum = stakeManager.getStakeMinimum();
         require(stake >= stakeMinimum, "Stake amount is below minimum");
         address provider = msg.sender;
-        bool success = computeRegistry.register(provider);
-        require(success, "Provider registration failed");
+        require(computeRegistry.register(provider), "Provider registration failed");
         AIToken.transferFrom(msg.sender, address(this), stake);
         AIToken.approve(address(stakeManager), stake);
         stakeManager.stake(provider, stake);
         emit ProviderRegistered(provider, stake);
+    }
+
+    function registerProviderWithPermit(uint256 stake, uint256 deadline, bytes memory signature) external {
+        (bytes32 r, bytes32 s, uint8 v) = abi.decode(signature, (bytes32, bytes32, uint8));
+        IERC20Permit(address(AIToken)).permit(msg.sender, address(this), stake, deadline, v, r, s);
+        registerProvider(stake);
     }
 
     function increaseStake(uint256 amount) external {
@@ -131,24 +136,10 @@ contract PrimeNetwork is AccessControlEnumerable {
         stakeManager.unstake(provider, amount);
     }
 
-    function registerProviderWithPermit(uint256 stake, uint256 deadline, bytes memory signature) external {
-        uint256 stakeMinimum = stakeManager.getStakeMinimum();
-        require(stake >= stakeMinimum, "Stake amount is below minimum");
-        address provider = msg.sender;
-        bool success = computeRegistry.register(provider);
-        require(success, "Provider registration failed");
-        (bytes32 r, bytes32 s, uint8 v) = abi.decode(signature, (bytes32, bytes32, uint8));
-        IERC20Permit(address(AIToken)).permit(msg.sender, address(this), stake, deadline, v, r, s);
-        AIToken.transferFrom(msg.sender, address(this), stake);
-        AIToken.approve(address(stakeManager), stake);
-        stakeManager.stake(provider, stake);
-        emit ProviderRegistered(provider, stake);
-    }
-
     function deregisterProvider(address provider) external {
         require(hasRole(VALIDATOR_ROLE, msg.sender) || msg.sender == provider, "Unauthorized");
         require(computeRegistry.getProviderActiveNodes(provider) == 0, "Provider has active nodes");
-        computeRegistry.deregister(provider);
+        require(computeRegistry.deregister(provider), "Provider deregistration failed");
         uint256 stake = stakeManager.getStake(provider);
         stakeManager.unstake(provider, stake);
         emit ProviderDeregistered(provider);
@@ -169,21 +160,10 @@ contract PrimeNetwork is AccessControlEnumerable {
         emit ComputeNodeAdded(provider, nodekey, specsURI);
     }
 
-    function _removeComputeNode(address provider, address nodekey) internal {
-        computeRegistry.removeComputeNode(provider, nodekey);
-        emit ComputeNodeRemoved(provider, nodekey);
-    }
-
     function removeComputeNode(address provider, address nodekey) external {
         require(hasRole(VALIDATOR_ROLE, msg.sender) || msg.sender == provider, "Unauthorized");
-        _removeComputeNode(provider, nodekey);
-    }
-
-    function _blacklistIfStakeTooLow(address provider) internal {
-        if (stakeManager.getStake(provider) < calculateMinimumStake(provider, 0)) {
-            computeRegistry.setWhitelistStatus(provider, false);
-            emit ProviderBlacklisted(provider);
-        }
+        computeRegistry.removeComputeNode(provider, nodekey);
+        emit ComputeNodeRemoved(provider, nodekey);
     }
 
     function slash(address provider, uint256 amount, bytes calldata reason) external onlyRole(VALIDATOR_ROLE) {

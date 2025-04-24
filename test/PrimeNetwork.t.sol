@@ -51,6 +51,9 @@ contract PrimeNetworkTest is Test {
     uint256 providerStake = 1000000;
     uint256 computeUnitsPerNode = 10;
 
+    bytes32 FEDERATOR_ROLE = keccak256("FEDERATOR_ROLE");
+    bytes32 VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
+
     struct NodeGroup {
         address provider;
         uint256 provder_key;
@@ -344,6 +347,8 @@ contract PrimeNetworkTest is Test {
         primeNetwork.registerProvider(providerStake);
         (address providerAddress,,) = computeRegistry.providers(provider_good1);
         assertEq(providerAddress, provider_good1);
+        vm.expectRevert("Provider registration failed");
+        primeNetwork.registerProvider(providerStake);
     }
 
     function test_providerDeregistrationAndUnstaking() public {
@@ -547,7 +552,22 @@ contract PrimeNetworkTest is Test {
         // Sign the digest
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(provider_permit_sk, digest);
         bytes memory signature = abi.encode(r, s, v);
+
+        // check allowance reset on revert
+        vm.startPrank(federator);
+        primeNetwork.setStakeMinimum(providerStake + 1);
+        vm.startPrank(provider_permit);
+        vm.expectRevert("Stake amount is below minimum");
         primeNetwork.registerProviderWithPermit(value, deadline, signature);
+        assertEq(AI.allowance(owner, spender), 0);
+        vm.startPrank(federator);
+        primeNetwork.setStakeMinimum(minStake);
+
+        // register and stake
+        vm.startPrank(provider_permit);
+        assertEq(stakeManager.getStake(owner), 0);
+        primeNetwork.registerProviderWithPermit(value, deadline, signature);
+        assertEq(stakeManager.getStake(owner), value);
     }
 
     function test_blacklistGasCosts() public {
@@ -655,9 +675,12 @@ contract PrimeNetworkTest is Test {
         bytes32 digest = keccak256(abi.encodePacked(provider_good1, node_good1)).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(node_good1_sk, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
-        vm.expectRevert();
+        vm.expectRevert("Insufficient stake");
         // try adding a node with a huge compute capacity, more than we have stake for, should revert
         primeNetwork.addComputeNode(node_good1, "ipfs://nodekey/", computeUnitsPerNode * 1000000, signature);
+        vm.expectRevert("Invalid signature");
+        // try adding a node with an invalid signature
+        primeNetwork.addComputeNode(node_good1, "ipfs://nodekey/", computeUnitsPerNode, "");
         // this should go through
         primeNetwork.addComputeNode(node_good1, "ipfs://nodekey/", computeUnitsPerNode, signature);
         assertEq(computeRegistry.getNode(provider_good1, node_good1).subkey, node_good1);
@@ -787,8 +810,23 @@ contract PrimeNetworkTest is Test {
         // Record validator's balance before slashing
         uint256 validatorBalanceBefore = AI.balanceOf(validator);
 
-        // slash provider
         uint256 stake = stakeManager.getStake(provider_good1);
+
+        // revert-path test
+        uint256 snap = vm.snapshotState();
+        vm.startPrank(federator);
+        // point StakeManager to a contract with no slash() to force revert
+        primeNetwork.setModuleAddresses(
+            address(computeRegistry), address(domainRegistry), address(computePool), address(computePool)
+        );
+        vm.startPrank(validator);
+        // triggers revert inside stakeManager.slash
+        primeNetwork.invalidateWork(pool, stake, work_id);
+        // provider should be black-listed
+        assertEq(computeRegistry.getWhitelistStatus(provider_good1), false);
+        vm.revertToState(snap);
+
+        // slash provider
         vm.startPrank(validator);
         primeNetwork.invalidateWork(pool, stake, work_id);
 
@@ -936,5 +974,47 @@ contract PrimeNetworkTest is Test {
 
         vm.expectRevert(bytes("ComputePool: pool is at capacity"));
         nodeJoin(domain, pool, provider_good1, node_good2);
+    }
+
+    function test_roleChange() public {
+        // set validator role
+        vm.startPrank(provider_good1);
+        vm.expectRevert();
+        primeNetwork.setValidator(provider_good1);
+
+        vm.startPrank(federator);
+        assertEq(primeNetwork.hasRole(VALIDATOR_ROLE, validator), true);
+        primeNetwork.setValidator(provider_good1);
+        assertEq(primeNetwork.hasRole(VALIDATOR_ROLE, validator), false);
+        assertEq(primeNetwork.hasRole(VALIDATOR_ROLE, provider_good1), true);
+        primeNetwork.setValidator(validator);
+        assertEq(primeNetwork.hasRole(VALIDATOR_ROLE, provider_good1), false);
+        assertEq(primeNetwork.hasRole(VALIDATOR_ROLE, validator), true);
+
+        // set federator role
+        vm.startPrank(provider_good1);
+        vm.expectRevert();
+        primeNetwork.setFederator(provider_good1);
+
+        vm.startPrank(federator);
+        assertEq(primeNetwork.hasRole(FEDERATOR_ROLE, federator), true);
+        primeNetwork.setFederator(provider_good1);
+        assertEq(primeNetwork.hasRole(FEDERATOR_ROLE, federator), false);
+        assertEq(primeNetwork.hasRole(FEDERATOR_ROLE, provider_good1), true);
+        primeNetwork.setFederator(federator);
+        assertEq(primeNetwork.hasRole(FEDERATOR_ROLE, provider_good1), false);
+        assertEq(primeNetwork.hasRole(FEDERATOR_ROLE, federator), true);
+    }
+
+    function test_primeBlacklist() public {
+        whitelistProvider(provider_good1);
+        assertEq(computeRegistry.getWhitelistStatus(provider_good1), true);
+        vm.startPrank(federator);
+        vm.expectRevert();
+        primeNetwork.blacklistProvider(provider_good1);
+
+        vm.startPrank(validator);
+        primeNetwork.blacklistProvider(provider_good1);
+        assertEq(computeRegistry.getWhitelistStatus(provider_good1), false);
     }
 }
