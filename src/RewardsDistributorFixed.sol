@@ -139,6 +139,8 @@ contract RewardsDistributorFixed is IRewardsDistributor, AccessControlEnumerable
 
         // Transfer out (require contract has enough tokens)
         rewardToken.transfer(msg.sender, payableAmount);
+
+        emit RewardsClaimed(poolId, msg.sender, node, payableAmount);
     }
 
     function calculateRewards(address node) external view returns (uint256, uint256) {
