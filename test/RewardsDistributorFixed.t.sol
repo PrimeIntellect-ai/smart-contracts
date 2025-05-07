@@ -221,10 +221,10 @@ contract RewardsDistributorFixedTest is Test {
         (,, uint256 unclaimed,) = distributor.nodeInfo(node);
         assertEq(unclaimed, 0);
 
-        uint256 nodeBalance = mockRewardToken.balanceOf(node);
+        uint256 providerBalance = mockRewardToken.balanceOf(nodeProvider);
         // New logic: 1 token/sec * 10 CU * 10 sec = 100 tokens.
-        assertEq(nodeBalance, 100 ether);
-        assertEq(nodeBalance, calculatedRewards);
+        assertEq(providerBalance, 100 ether);
+        assertEq(providerBalance, calculatedRewards);
     }
 
     /// ---------------------------------------
@@ -248,10 +248,10 @@ contract RewardsDistributorFixedTest is Test {
         vm.prank(nodeProvider);
         distributor.claimRewards(node);
 
-        uint256 nodeBalance = mockRewardToken.balanceOf(node);
+        uint256 providerBalance = mockRewardToken.balanceOf(nodeProvider);
         // New logic: 1 token/sec * 10 CU * 5 sec = 50 tokens.
-        assertEq(nodeBalance, 50 ether);
-        assertEq(nodeBalance, calculatedRewards);
+        assertEq(providerBalance, 50 ether);
+        assertEq(providerBalance, calculatedRewards);
     }
 
     /// ---------------------------------------
@@ -285,17 +285,17 @@ contract RewardsDistributorFixedTest is Test {
         distributor.claimRewards(node2);
         vm.stopPrank();
 
-        uint256 node1Balance = mockRewardToken.balanceOf(node1);
-        uint256 node2Balance = mockRewardToken.balanceOf(node2);
+        uint256 nodeProvider1Balance = mockRewardToken.balanceOf(nodeProvider1);
+        uint256 nodeProvider2Balance = mockRewardToken.balanceOf(nodeProvider2);
 
-        assertEq(node1Pending, node1Balance, "Node1 pending balance mismatch");
-        assertEq(node2Pending, node2Balance, "Node2 pending balance mismatch");
+        assertEq(node1Pending, nodeProvider1Balance, "Node1 pending balance mismatch");
+        assertEq(node2Pending, nodeProvider2Balance, "Node2 pending balance mismatch");
 
         // Expected:
         // Node1: 1500 (from first segment) + 1500 (from second) = 3000 tokens.
         // Node2: 1500 tokens.
-        assertEq(node1Balance, 3000 ether, "Node1 balance mismatch");
-        assertEq(node2Balance, 1500 ether, "Node2 balance mismatch");
+        assertEq(nodeProvider1Balance, 3000 ether, "Node1 balance mismatch");
+        assertEq(nodeProvider2Balance, 1500 ether, "Node2 balance mismatch");
     }
 
     /// ---------------------------------------
@@ -337,16 +337,16 @@ contract RewardsDistributorFixedTest is Test {
         distributor.claimRewards(node2);
         vm.stopPrank();
 
-        uint256 node1Bal = mockRewardToken.balanceOf(node1);
-        uint256 node2Bal = mockRewardToken.balanceOf(node2);
+        uint256 nodeProvider1Bal = mockRewardToken.balanceOf(nodeProvider1);
+        uint256 nodeProvider2Bal = mockRewardToken.balanceOf(nodeProvider2);
 
-        assertEq(node1Pending, node1Bal, "Node1 pending balance mismatch");
-        assertEq(node2Pending, node2Bal, "Node2 pending balance mismatch");
+        assertEq(node1Pending, nodeProvider1Bal, "Node1 pending balance mismatch");
+        assertEq(node2Pending, nodeProvider2Bal, "Node2 pending balance mismatch");
 
         // Final expected totals:
         // Node1: 5000 + 10000 + 10000 = 25000 tokens.
         // Node2: 5000 tokens.
-        assertEq(node1Bal, 25000 ether, "Node1 final balance mismatch");
-        assertEq(node2Bal, 5000 ether, "Node2 final balance mismatch");
+        assertEq(nodeProvider1Bal, 25000 ether, "Node1 final balance mismatch");
+        assertEq(nodeProvider2Bal, 5000 ether, "Node2 final balance mismatch");
     }
 }

@@ -144,6 +144,8 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
         require(tokensToSend <= rewardToken.balanceOf(address(this)), "Insufficient tokens");
 
         rewardToken.transfer(msg.sender, tokensToSend);
+
+        emit RewardsClaimed(poolId, msg.sender, node, tokensToSend);
     }
 
     // --------------------------------------------------------------------------------------------
