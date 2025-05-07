@@ -997,4 +997,22 @@ contract PrimeNetworkTest is Test {
         console.log("Provider balance after claim:", provider_balance_after);
         assertEq(provider_balance_after, provider_balance + pendingRewards);
     }
+
+    function test_reAddRemovedNodeReverts() public {
+        // register + whitelist provider
+        addProvider(provider_good1);
+        whitelistProvider(provider_good1);
+
+        // add an inactive node (default isInactive = true -> removable)
+        addNode(provider_good1, node_good1, node_good1_sk);
+
+        // remove it — this clears nodeSubkeyToIndex but *not* nodeProviderMap
+        removeNode(provider_good1, node_good1);
+
+        // re-add the same subkey
+        addNode(provider_good1, node_good1, node_good1_sk);
+
+        // should have successfully re-added the node
+        assertEq(computeRegistry.getNodeProvider(node_good1), provider_good1);
+    }
 }

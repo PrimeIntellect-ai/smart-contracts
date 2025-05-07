@@ -74,8 +74,8 @@ contract ComputeRegistry is IComputeRegistry, AccessControlEnumerable {
         if (existingProvider != address(0)) {
             require(existingProvider == provider, "ComputeRegistry: node has already registered with another provider");
             // check if this node already exists in this providers list
-            uint256 nodeIndex = nodeSubkeyToIndex.get(subkey);
-            if (nodeIndex < providers[provider].nodes.length) {
+            (bool exists, uint256 nodeIndex) = nodeSubkeyToIndex.tryGet(subkey);
+            if (exists && nodeIndex < providers[provider].nodes.length) {
                 // check if the node is already registered with this provider
                 ComputeNode memory existingNode = providers[provider].nodes[nodeIndex];
                 require(existingNode.subkey != subkey, "ComputeRegistry: node already exists with this provider");
