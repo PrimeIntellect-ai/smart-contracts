@@ -144,7 +144,9 @@ contract RewardsDistributor is IRewardsDistributor, AccessControlEnumerable {
         nd.unclaimedRewards = 0;
 
         // Transfer out (require contract has enough tokens)
-        rewardToken.transfer(node, payableAmount);
+        rewardToken.transfer(msg.sender, payableAmount);
+
+        emit RewardsClaimed(poolId, msg.sender, node, payableAmount);
     }
 
     function calculateRewards(address node) external view returns (uint256, uint256) {

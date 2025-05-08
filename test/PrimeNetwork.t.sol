@@ -13,6 +13,7 @@ import {IDomainRegistry} from "../src/interfaces/IDomainRegistry.sol";
 import {IWorkValidation} from "../src/interfaces/IWorkValidation.sol";
 import {IRewardsDistributorFactory} from "../src/interfaces/IRewardsDistributorFactory.sol";
 import {RewardsDistributorFactory} from "../src/RewardsDistributorFactory.sol";
+import {IRewardsDistributor} from "../src/interfaces/IRewardsDistributor.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
@@ -936,5 +937,82 @@ contract PrimeNetworkTest is Test {
 
         vm.expectRevert(bytes("ComputePool: pool is at capacity"));
         nodeJoin(domain, pool, provider_good1, node_good2);
+    }
+
+    function test_RewardFunction() public {
+        uint256 domain = newDomain("Decentralized Training", "https://primeintellect.ai/training/params");
+        uint256 pool = newPool(domain, "INTELLECT-1", "https://primeintellect.ai/pools/intellect-1");
+
+        startPool(pool);
+
+        addProviderWithStake(provider_good1, minStake * 100);
+        whitelistProvider(provider_good1);
+
+        addNodeWithCompute(provider_good1, node_good1, node_good1_sk, computeUnitsPerNode);
+
+        validateNode(provider_good1, node_good1);
+
+        assertEq(computeRegistry.getNode(provider_good1, node_good1).subkey, node_good1);
+
+        nodeJoin(domain, pool, provider_good1, node_good1);
+
+        assertEq(isNodeInPool(pool, node_good1), true);
+
+        IRewardsDistributor rewardsDistributor = IRewardsDistributor(computePool.getRewardDistributorForPool(pool));
+
+        vm.startPrank(federator);
+        // fund pool and set reward rate
+        AI.mint(address(rewardsDistributor), 1000 * 1000 * 10);
+        rewardsDistributor.setRewardRate(1000);
+        vm.stopPrank();
+
+        // skip time
+        skip(block.timestamp + 1000);
+
+        // remove node from pool
+        nodeLeave(pool, provider_good1, node_good1);
+        assertEq(isNodeInPool(pool, node_good1), false);
+
+        // remove node from registry
+        removeNode(provider_good1, node_good1);
+        // ensure node is removed
+        vm.expectRevert();
+        computeRegistry.getNode(provider_good1, node_good1);
+
+        // ensure provider is still registered as owning the node historically
+        assertEq(computeRegistry.getNodeProvider(node_good1), provider_good1);
+
+        // make sure rewards claiming still works even if node is removed from registry
+        (uint256 pendingRewards,) = rewardsDistributor.calculateRewards(node_good1);
+        uint256 provider_balance = AI.balanceOf(provider_good1);
+        console.log("Provider balance before claim:", provider_balance);
+        console.log("Pending rewards:", pendingRewards);
+
+        vm.startPrank(provider_good1);
+        rewardsDistributor.claimRewards(node_good1);
+        vm.stopPrank();
+
+        // check that the rewards were sent to the provider
+        uint256 provider_balance_after = AI.balanceOf(provider_good1);
+        console.log("Provider balance after claim:", provider_balance_after);
+        assertEq(provider_balance_after, provider_balance + pendingRewards);
+    }
+
+    function test_reAddRemovedNodeReverts() public {
+        // register + whitelist provider
+        addProvider(provider_good1);
+        whitelistProvider(provider_good1);
+
+        // add an inactive node (default isInactive = true -> removable)
+        addNode(provider_good1, node_good1, node_good1_sk);
+
+        // remove it — this clears nodeSubkeyToIndex but *not* nodeProviderMap
+        removeNode(provider_good1, node_good1);
+
+        // re-add the same subkey
+        addNode(provider_good1, node_good1, node_good1_sk);
+
+        // should have successfully re-added the node
+        assertEq(computeRegistry.getNodeProvider(node_good1), provider_good1);
     }
 }

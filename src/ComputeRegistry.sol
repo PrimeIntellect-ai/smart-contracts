@@ -71,9 +71,17 @@ contract ComputeRegistry is IComputeRegistry, AccessControlEnumerable {
         returns (uint256)
     {
         address existingProvider = nodeProviderMap[subkey];
-        require(
-            existingProvider == address(0), "ComputeRegistry: node already exists or registered to a different provider"
-        );
+        if (existingProvider != address(0)) {
+            require(existingProvider == provider, "ComputeRegistry: node has already registered with another provider");
+            // check if this node already exists in this providers list
+            (bool exists, uint256 nodeIndex) = nodeSubkeyToIndex.tryGet(subkey);
+            if (exists && nodeIndex < providers[provider].nodes.length) {
+                // check if the node is already registered with this provider
+                ComputeNode memory existingNode = providers[provider].nodes[nodeIndex];
+                require(existingNode.subkey != subkey, "ComputeRegistry: node already exists with this provider");
+            }
+            // else node existed in the past, got removed, and is just being readded, continue on as normal
+        }
         ComputeProvider storage cp = providers[provider];
         ComputeNode memory cn;
         cn.provider = provider;
@@ -107,7 +115,6 @@ contract ComputeRegistry is IComputeRegistry, AccessControlEnumerable {
         // remove last node
         cp.nodes.pop();
         nodeSubkeyToIndex.remove(subkey);
-        nodeProviderMap[subkey] = address(0);
         providerTotalCompute[provider] -= uint256(cn.computeUnits);
         return true;
     }

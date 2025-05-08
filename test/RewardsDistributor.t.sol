@@ -266,7 +266,7 @@ contract RewardsDistributorTest is Test {
         assertEq(unclaimed, 0);
 
         // Check the node's token balance is correct
-        uint256 nodeBalance = mockRewardToken.balanceOf(node);
+        uint256 nodeProviderBalance = mockRewardToken.balanceOf(nodeProvider);
         // Rewards per second = 1 token; 10 seconds => 10 tokens
         // but node has 10 computeUnits => total 1 * 10 * 10?
         // Actually, the contract logic distributes 1 token/sec / totalActiveComputeUnits
@@ -279,8 +279,8 @@ contract RewardsDistributorTest is Test {
         // or your contract might do more precise math if using decimals.)
         //
         // For demonstration, let's just check we got > 0
-        assertEq(nodeBalance, 10 ether);
-        assertEq(nodeBalance, calculatedRewards);
+        assertEq(nodeProviderBalance, 10 ether);
+        assertEq(nodeProviderBalance, calculatedRewards);
     }
 
     /// ---------------------------------------
@@ -311,11 +311,11 @@ contract RewardsDistributorTest is Test {
         distributor.claimRewards(node);
 
         // The node's balance should reflect only the reward for the first 5 seconds
-        uint256 nodeBalance = mockRewardToken.balanceOf(node);
+        uint256 nodeProviderBalance = mockRewardToken.balanceOf(nodeProvider);
         // 1 token/sec total / 10 computeUnits => 0.1 token/sec per unit * 10 units = 1 token/sec total
         // => 5 seconds => 5 tokens
-        assertEq(nodeBalance, 5 ether);
-        assertEq(nodeBalance, calculatedRewards);
+        assertEq(nodeProviderBalance, 5 ether);
+        assertEq(nodeProviderBalance, calculatedRewards);
     }
 
     /// ---------------------------------------
@@ -355,11 +355,11 @@ contract RewardsDistributorTest is Test {
         vm.stopPrank();
 
         // 5. Check balances
-        uint256 node1Balance = mockRewardToken.balanceOf(node1);
-        uint256 node2Balance = mockRewardToken.balanceOf(node2);
+        uint256 node1ProviderBalance = mockRewardToken.balanceOf(nodeProvider1);
+        uint256 node2ProviderBalance = mockRewardToken.balanceOf(nodeProvider2);
 
-        assertEq(node1Pending, node1Balance, "Node1 pending balance mismatch");
-        assertEq(node2Pending, node2Balance, "Node2 pending balance mismatch");
+        assertEq(node1Pending, node1ProviderBalance, "Node1 pending balance mismatch");
+        assertEq(node2Pending, node2ProviderBalance, "Node2 pending balance mismatch");
 
         // Explanation of the math (given integer division in the contract):
         //
@@ -381,8 +381,8 @@ contract RewardsDistributorTest is Test {
         //   Node2: 0 + 75 = 75
         //
         // After claim, that’s the token balances:
-        assertEq(node1Balance, 225 ether, "Node1 balance mismatch");
-        assertEq(node2Balance, 75 ether, "Node2 balance mismatch");
+        assertEq(node1ProviderBalance, 225 ether, "Node1 balance mismatch");
+        assertEq(node2ProviderBalance, 75 ether, "Node2 balance mismatch");
     }
 
     /// ---------------------------------------
@@ -433,11 +433,11 @@ contract RewardsDistributorTest is Test {
         distributor.claimRewards(node2);
         vm.stopPrank();
 
-        uint256 node1Bal = mockRewardToken.balanceOf(node1);
-        uint256 node2Bal = mockRewardToken.balanceOf(node2);
+        uint256 nodeProvider1Bal = mockRewardToken.balanceOf(nodeProvider1);
+        uint256 nodeProvider2Bal = mockRewardToken.balanceOf(nodeProvider2);
 
-        assertEq(node1Pending, node1Bal, "Node1 pending balance mismatch");
-        assertEq(node2Pending, node2Bal, "Node2 pending balance mismatch");
+        assertEq(node1Pending, nodeProvider1Bal, "Node1 pending balance mismatch");
+        assertEq(node2Pending, nodeProvider2Bal, "Node2 pending balance mismatch");
 
         // Let’s break down the rewards in each time segment:
         //
@@ -465,7 +465,7 @@ contract RewardsDistributorTest is Test {
         //   Node1: 1500 + 666.666... = 2166.666...
         //   Node2: 0 + 333.333...    = 333.333...
         //
-        assertEq(node1Bal, 2166.66666666666666666 ether, "Node1 final balance mismatch");
-        assertEq(node2Bal, 333.33333333333333333 ether, "Node2 final balance mismatch");
+        assertEq(nodeProvider1Bal, 2166.66666666666666666 ether, "Node1 final balance mismatch");
+        assertEq(nodeProvider2Bal, 333.33333333333333333 ether, "Node2 final balance mismatch");
     }
 }
