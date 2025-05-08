@@ -183,7 +183,8 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
         // Optionally, send the slashed tokens to a treasury or burn them
         // rewardToken.transfer(treasury, pending24h * rewardRatePerUnit);
 
-        emit PendingRewardsSlashed(poolId, node, pending24h * rewardRatePerUnit);
+        address provider = computeRegistry.getNodeProvider(node); // get the provider for the node
+        emit PendingRewardsSlashed(poolId, provider, node, pending24h * rewardRatePerUnit);
     }
 
     // --------------------------------------------------------------------------------------------

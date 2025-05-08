@@ -5,7 +5,9 @@ event RewardRate(uint256 indexed poolId, uint256 rate);
 
 event RewardsClaimed(uint256 indexed poolId, address indexed provider, address indexed nodekey, uint256 reward);
 
-event PendingRewardsSlashed(uint256 indexed poolId, address indexed node, uint256 slashedAmount);
+event PendingRewardsSlashed(
+    uint256 indexed poolId, address indexed provider, address indexed node, uint256 slashedAmount
+);
 
 interface IRewardsDistributor {
     function calculateRewards(address node) external view returns (uint256, uint256);
