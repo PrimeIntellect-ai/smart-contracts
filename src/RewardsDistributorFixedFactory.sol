@@ -24,6 +24,8 @@ contract RewardsDistributorFixedFactory is AccessControl, IRewardsDistributorFac
         onlyRole(REWARD_CREATOR)
         returns (IRewardsDistributor)
     {
-        return new RewardsDistributorFixed(computePool, _computeRegistry, _poolId);
+        IRewardsDistributor rd = new RewardsDistributorFixed(computePool, _computeRegistry, _poolId);
+        emit NewRewardsDistributor(address(rd), address(computePool), _poolId);
+        return rd;
     }
 }

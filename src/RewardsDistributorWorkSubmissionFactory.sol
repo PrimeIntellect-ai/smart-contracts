@@ -24,6 +24,8 @@ contract RewardsDistributorWorkSubmissionFactory is AccessControl, IRewardsDistr
         onlyRole(REWARD_CREATOR)
         returns (IRewardsDistributor)
     {
-        return new RewardsDistributorWorkSubmission(computePool, _computeRegistry, _poolId);
+        IRewardsDistributor rd = new RewardsDistributorWorkSubmission(computePool, _computeRegistry, _poolId);
+        emit NewRewardsDistributor(address(rd), address(computePool), _poolId);
+        return rd;
     }
 }
