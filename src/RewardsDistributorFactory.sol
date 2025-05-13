@@ -24,6 +24,8 @@ contract RewardsDistributorFactory is AccessControl, IRewardsDistributorFactory 
         onlyRole(REWARD_CREATOR)
         returns (IRewardsDistributor)
     {
-        return new RewardsDistributor(computePool, _computeRegistry, _poolId);
+        IRewardsDistributor rd = new RewardsDistributor(computePool, _computeRegistry, _poolId);
+        emit NewRewardsDistributor(address(rd), address(computePool), _poolId);
+        return rd;
     }
 }
