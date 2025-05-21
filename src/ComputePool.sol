@@ -35,6 +35,7 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
     IERC20 public AIToken;
 
     mapping(uint256 => PoolState) private poolStates;
+    mapping(bytes32 => bool) private usedMessageHashes;
 
     modifier onlyExistingPool(uint256 poolId) {
         // check creator here since it's the only field that can't be 0
@@ -83,10 +84,19 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
         uint256 poolId,
         address computeManagerKey,
         address nodekey,
+        uint256 nonce,
+        uint256 expiration,
         bytes memory signature
-    ) internal view returns (bool) {
-        bytes32 messageHash = keccak256(abi.encodePacked(domainId, poolId, nodekey)).toEthSignedMessageHash();
-        return SignatureChecker.isValidSignatureNow(computeManagerKey, messageHash, signature);
+    ) internal returns (bool) {
+        require(expiration > block.timestamp, "ComputePool: invite expired");
+        bytes32 messageHash =
+            keccak256(abi.encodePacked(domainId, poolId, nodekey, nonce, expiration)).toEthSignedMessageHash();
+        require(!usedMessageHashes[messageHash], "ComputePool: invite already used");
+        bool valid = SignatureChecker.isValidSignatureNow(computeManagerKey, messageHash, signature);
+        if (valid) {
+            usedMessageHashes[messageHash] = true;
+        }
+        return valid;
     }
 
     function _removeNodeSafe(uint256 poolId, address provider, address node) internal {
@@ -171,9 +181,14 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
         emit ComputePoolEnded(poolId);
     }
 
-    function _joinComputePool(uint256 poolId, address provider, address[] memory nodekey, bytes[] memory signatures)
-        internal
-    {
+    function _joinComputePool(
+        uint256 poolId,
+        address provider,
+        address[] memory nodekey,
+        uint256[] memory nonces,
+        uint256[] memory expirations,
+        bytes[] memory signatures
+    ) internal {
         for (uint256 i = 0; i < nodekey.length; i++) {
             require(!poolStates[poolId].blacklistedNodes[nodekey[i]], "ComputePool: node is blacklisted");
         }
@@ -194,7 +209,13 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
             require(isValidated, "ComputePool: node is not validated");
             require(
                 _verifyPoolInvite(
-                    pools[poolId].domainId, poolId, pools[poolId].computeManagerKey, nodekey[i], signatures[i]
+                    pools[poolId].domainId,
+                    poolId,
+                    pools[poolId].computeManagerKey,
+                    nodekey[i],
+                    nonces[i],
+                    expirations[i],
+                    signatures[i]
                 ),
                 "ComputePool: invalid invite"
             );
@@ -206,31 +227,41 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
         }
     }
 
-    function joinComputePool(uint256 poolId, address provider, address nodekey, bytes memory signature)
-        external
-        onlyExistingPool(poolId)
-        onlyValidProvider(poolId, provider)
-    {
+    function joinComputePool(
+        uint256 poolId,
+        address provider,
+        address nodekey,
+        uint256 nonce,
+        uint256 expiration,
+        bytes memory signature
+    ) external onlyExistingPool(poolId) onlyValidProvider(poolId, provider) {
         require(msg.sender == provider, "ComputePool: only provider can join pool");
 
         address[] memory nodekeys = new address[](1);
         bytes[] memory signatures = new bytes[](1);
+        uint256[] memory nonces = new uint256[](1);
+        uint256[] memory expirations = new uint256[](1);
         nodekeys[0] = nodekey;
+        nonces[0] = nonce;
+        expirations[0] = expiration;
         signatures[0] = signature;
 
-        _joinComputePool(poolId, provider, nodekeys, signatures);
+        _joinComputePool(poolId, provider, nodekeys, nonces, expirations, signatures);
 
         emit ComputePoolJoined(poolId, provider, nodekeys);
     }
 
-    function joinComputePool(uint256 poolId, address provider, address[] memory nodekey, bytes[] memory signatures)
-        external
-        onlyExistingPool(poolId)
-        onlyValidProvider(poolId, provider)
-    {
+    function joinComputePool(
+        uint256 poolId,
+        address provider,
+        address[] memory nodekey,
+        uint256[] memory nonces,
+        uint256[] memory expirations,
+        bytes[] memory signatures
+    ) external onlyExistingPool(poolId) onlyValidProvider(poolId, provider) {
         require(msg.sender == provider, "ComputePool: only provider can join pool");
 
-        _joinComputePool(poolId, provider, nodekey, signatures);
+        _joinComputePool(poolId, provider, nodekey, nonces, expirations, signatures);
 
         emit ComputePoolJoined(poolId, provider, nodekey);
     }
@@ -279,6 +310,8 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
         uint256 fromPoolId,
         uint256 toPoolId,
         address[] memory nodekeys,
+        uint256[] memory nonces,
+        uint256[] memory expirations,
         bytes[] memory signatures
     ) external onlyExistingPool(fromPoolId) onlyExistingPool(toPoolId) {
         require(pools[toPoolId].status == PoolStatus.ACTIVE, "ComputePool: dest pool is not ready");
@@ -292,7 +325,7 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
         } else {
             _leaveComputePool(fromPoolId, provider, nodekeys);
         }
-        _joinComputePool(toPoolId, provider, nodekeys, signatures);
+        _joinComputePool(toPoolId, provider, nodekeys, nonces, expirations, signatures);
     }
 
     function submitWork(uint256 poolId, address node, bytes calldata data) external onlyExistingPool(poolId) {

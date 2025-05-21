@@ -219,24 +219,38 @@ contract PrimeNetworkTest is Test {
 
     function nodeJoin(uint256 domainId, uint256 poolId, address provider, address node)
         public
-        returns (address[] memory, bytes[] memory)
+        returns (address[] memory, uint256[] memory, uint256[] memory, bytes[] memory)
     {
-        bytes32 digest = keccak256(abi.encodePacked(domainId, poolId, node)).toEthSignedMessageHash();
+        // generate random nonce
+        uint256 nonce = uint256(keccak256(abi.encodePacked(block.timestamp, node)));
+        uint256 expiration = block.timestamp + 1000;
+        bytes32 digest = keccak256(abi.encodePacked(domainId, poolId, node, nonce, expiration)).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(computeManager_sk, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.startPrank(provider);
         address[] memory nodes = new address[](1);
         bytes[] memory signatures = new bytes[](1);
+        uint256[] memory nonces = new uint256[](1);
+        uint256[] memory expirations = new uint256[](1);
         nodes[0] = node;
+        nonces[0] = nonce;
+        expirations[0] = expiration;
         signatures[0] = signature;
-        computePool.joinComputePool(poolId, provider, nodes, signatures);
-        return (nodes, signatures);
+        computePool.joinComputePool(poolId, provider, nodes, nonces, expirations, signatures);
+        return (nodes, nonces, expirations, signatures);
     }
 
     function nodeJoinMultiple(uint256 domainId, uint256 poolId, address provider, address[] memory nodes) public {
         bytes[] memory signatures = new bytes[](nodes.length);
+        uint256[] memory nonces = new uint256[](nodes.length);
+        uint256[] memory expirations = new uint256[](nodes.length);
         for (uint256 i = 0; i < nodes.length; i++) {
-            bytes32 digest = keccak256(abi.encodePacked(domainId, poolId, nodes[i])).toEthSignedMessageHash();
+            uint256 nonce = uint256(keccak256(abi.encodePacked(block.timestamp, nodes[i])));
+            uint256 expiration = block.timestamp + 1000;
+            bytes32 digest =
+                keccak256(abi.encodePacked(domainId, poolId, nodes[i], nonce, expiration)).toEthSignedMessageHash();
+            nonces[i] = nonce;
+            expirations[i] = expiration;
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(computeManager_sk, digest);
             bytes memory signature = abi.encodePacked(r, s, v);
             signatures[i] = signature;
@@ -253,7 +267,7 @@ contract PrimeNetworkTest is Test {
             )
         );
         vm.startPrank(provider);
-        computePool.joinComputePool(poolId, provider, nodes, signatures);
+        computePool.joinComputePool(poolId, provider, nodes, nonces, expirations, signatures);
         uint256 gasUsed = vm.snapshotGasLastCall(msgString);
         console.log(msgString, gasUsed);
     }
@@ -477,7 +491,10 @@ contract PrimeNetworkTest is Test {
 
         nodeLeaveAll(pool, provider_good1);
 
+        // add skips to gen different nonce inside nodeJoin
+        skip(1);
         nodeJoin(domain, pool, provider_good1, node_good1);
+        skip(1);
         nodeJoin(domain, pool, provider_good1, node_good2);
 
         // check eject works
@@ -676,7 +693,11 @@ contract PrimeNetworkTest is Test {
         );
         computePool.startComputePool(poolId);
         // invite node to join pool
-        bytes32 digest_invite = keccak256(abi.encodePacked(domainId, poolId, node_good1)).toEthSignedMessageHash();
+        // generate random nonce
+        uint256 nonce = uint256(keccak256(abi.encodePacked(block.timestamp, node_good1)));
+        uint256 expiration = block.timestamp + 1000;
+        bytes32 digest_invite =
+            keccak256(abi.encodePacked(domainId, poolId, node_good1, nonce, expiration)).toEthSignedMessageHash();
         (uint8 v_invite, bytes32 r_invite, bytes32 s_invite) = vm.sign(computeManager_sk, digest_invite);
         bytes memory signature_invite = abi.encodePacked(r_invite, s_invite, v_invite);
         // end pool creator role
@@ -687,7 +708,11 @@ contract PrimeNetworkTest is Test {
         nodes[0] = node_good1;
         bytes[] memory signatures = new bytes[](1);
         signatures[0] = signature_invite;
-        computePool.joinComputePool(poolId, provider_good1, nodes, signatures);
+        uint256[] memory nonces = new uint256[](1);
+        uint256[] memory expirations = new uint256[](1);
+        nonces[0] = nonce;
+        expirations[0] = expiration;
+        computePool.joinComputePool(poolId, provider_good1, nodes, nonces, expirations, signatures);
     }
 
     function test_stakeOps() public {
@@ -888,7 +913,8 @@ contract PrimeNetworkTest is Test {
 
         startPool(pool1);
 
-        (address[] memory nodes, bytes[] memory signatures) = nodeJoin(domain, pool1, provider_good1, node_good1);
+        (address[] memory nodes, uint256[] memory nonces, uint256[] memory expirations, bytes[] memory signatures) =
+            nodeJoin(domain, pool1, provider_good1, node_good1);
 
         assertEq(isNodeInPool(pool1, node_good1), true);
 
@@ -897,7 +923,7 @@ contract PrimeNetworkTest is Test {
 
         vm.startPrank(provider_good1);
         vm.expectRevert(providerBlacklistError);
-        computePool.joinComputePool(pool1, provider_good1, nodes, signatures);
+        computePool.joinComputePool(pool1, provider_good1, nodes, nonces, expirations, signatures);
 
         startPool(pool2);
 
@@ -905,7 +931,7 @@ contract PrimeNetworkTest is Test {
 
         vm.startPrank(provider_good1);
         vm.expectRevert(providerBlacklistError);
-        computePool.changeComputePool(pool2, pool1, nodes, signatures);
+        computePool.changeComputePool(pool2, pool1, nodes, nonces, expirations, signatures);
     }
 
     function test_computeLimit() public {
