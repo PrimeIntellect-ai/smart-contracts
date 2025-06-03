@@ -51,6 +51,7 @@ contract SyntheticDataWorkValidator is IWorkValidation {
         }
         require(!poolWork[poolId].workKeys.contains(workKey), "Work already submitted");
         require(!poolWork[poolId].invalidWorkKeys.contains(workKey), "Work already invalidated");
+        require(workUnits > 0, "Invalid work units");
 
         poolWork[poolId].workKeys.add(workKey);
         poolWork[poolId].work[workKey] = WorkInfo(provider, nodeId, uint64(block.timestamp), workUnits);
