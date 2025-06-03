@@ -14,7 +14,6 @@ contract SyntheticDataWorkValidator is IWorkValidation {
     uint256 domainId;
     address computePool;
     uint256 workValidityPeriod = 1 days;
-    uint256 constant MAX_WORK_UNITS = 1000;
 
     struct WorkState {
         EnumerableSet.Bytes32Set workKeys;
@@ -52,7 +51,7 @@ contract SyntheticDataWorkValidator is IWorkValidation {
         }
         require(!poolWork[poolId].workKeys.contains(workKey), "Work already submitted");
         require(!poolWork[poolId].invalidWorkKeys.contains(workKey), "Work already invalidated");
-        require(workUnits > 0 && workUnits <= MAX_WORK_UNITS, "Invalid work units");
+        require(workUnits > 0, "Invalid work units");
 
         poolWork[poolId].workKeys.add(workKey);
         poolWork[poolId].work[workKey] = WorkInfo(provider, nodeId, uint64(block.timestamp), workUnits);
