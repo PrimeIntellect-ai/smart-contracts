@@ -91,20 +91,20 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
     // --------------------------------------------------------------------------------------------
 
     /// @notice Called by the pool to record that `node` performed `workUnits`.
-    ///         This increments the node’s current bucket, ensuring O(1) ring buffer updates.
+    ///         This increments the node's current bucket, ensuring O(1) ring buffer updates.
     function submitWork(address node, uint256 workUnits) external onlyRole(COMPUTE_POOL_ROLE) {
         require(endTime == 0, "Rewards have ended");
         require(computePool.isNodeInPool(poolId, node), "Node not in pool");
 
         NodeBuckets storage nb = nodeBuckets[node];
-        // Roll forward first to ensure we’re in the correct active bucket
+        // Roll forward first to ensure we're in the correct active bucket
         _rollBuckets(node);
 
         // Increment the current bucket
         nb.buckets[nb.currentBucket] += workUnits;
         nb.totalLast24H += workUnits;
 
-        // Track an all-time total if you want to do “locked/unlocked” logic
+        // Track an all-time total if you want to do "locked/unlocked" logic
         nb.totalAllSubmissions += workUnits;
 
         // Optionally, ensure lastBucketTimestamp is set if first time
@@ -120,9 +120,9 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
     /**
      * @notice Bucket approach:
      *  - totalAllSubmissions: total submissions ever done by this node.
-     *  - totalLast24H: the sum of the ring buffer’s most recent 24h.
-     *    We treat that as “locked.”
-     *  - The difference (totalAllSubmissions - totalLast24H) is “unlocked.”
+     *  - totalLast24H: the sum of the ring buffer's most recent 24h.
+     *    We treat that as "locked."
+     *  - The difference (totalAllSubmissions - totalLast24H) is "unlocked."
      *  - We track lastClaimed to ensure we only pay incremental amounts.
      */
     function claimRewards(address node) external {
@@ -196,7 +196,7 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
 
         NodeBuckets memory nb = nodeBuckets[node];
 
-        // Simulate the ring buffer if updated “now”
+        // Simulate the ring buffer if updated "now"
         uint256 elapsed = (block.timestamp - nb.lastBucketTimestamp) / BUCKET_DURATION;
         uint256 simulatedTotalLast24H = nb.totalLast24H;
         if (elapsed >= NUM_BUCKETS) {
@@ -211,7 +211,7 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
                 simulatedTotalLast24H -= nb.buckets[idx];
             }
         }
-        // “Unlocked so far” if we hypothetically updated now
+        // "Unlocked so far" if we hypothetically updated now
         uint256 unlockedNow = nb.totalAllSubmissions - simulatedTotalLast24H;
         uint256 claimable = unlockedNow - nb.lastClaimed;
         uint256 claimableTokens = claimable * rewardRatePerUnit;
@@ -252,7 +252,7 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
     }
 
     function leavePool(address node) external onlyRole(COMPUTE_POOL_ROLE) {
-        // Optionally roll + finalize the node’s data. Zero out buckets, etc.
+        // Optionally roll + finalize the node's data. Zero out buckets, etc.
         _rollBuckets(node);
     }
 
@@ -260,5 +260,55 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
         // We freeze further submissions here.
         require(endTime == 0, "Already ended");
         endTime = block.timestamp;
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // Soft slash functions for batch work scenarios
+    // --------------------------------------------------------------------------------------------
+
+    /**
+     * @notice Removes specific work units from a node's submissions (soft slash).
+     *         This is useful when work is incomplete and you want to remove
+     *         work submissions without harsh penalties.
+     * @param node The address of the node whose work should be removed.
+     * @param workUnits The number of work units to remove.
+     * @dev This function can only be called by the COMPUTE_POOL_ROLE.
+     *      It removes work from the current bucket and adjusts totals accordingly.
+     */
+    function removeWork(address node, uint256 workUnits) external onlyRole(COMPUTE_POOL_ROLE) {
+        if (workUnits == 0) return; // No-op if no work to remove
+
+        NodeBuckets storage nb = nodeBuckets[node];
+        _rollBuckets(node);
+
+        // Ensure we don't remove more than what exists
+        uint256 toRemove = workUnits > nb.totalLast24H ? nb.totalLast24H : workUnits;
+        if (toRemove == 0) return; // Nothing to remove
+
+        // Remove from current bucket first, then work backwards if needed
+        uint256 remaining = toRemove;
+        uint256 bucketIdx = nb.currentBucket;
+
+        // Remove from buckets, starting with the current one
+        for (uint256 i = 0; i < NUM_BUCKETS && remaining > 0; i++) {
+            uint256 bucketAmount = nb.buckets[bucketIdx];
+            if (bucketAmount > 0) {
+                uint256 removeFromBucket = remaining > bucketAmount ? bucketAmount : remaining;
+                nb.buckets[bucketIdx] -= removeFromBucket;
+                remaining -= removeFromBucket;
+            }
+            // Move to previous bucket (circular)
+            bucketIdx = bucketIdx == 0 ? NUM_BUCKETS - 1 : bucketIdx - 1;
+        }
+
+        // Update totals
+        uint256 actualRemoved = toRemove - remaining;
+        nb.totalLast24H -= actualRemoved;
+
+        // Also reduce total submissions to maintain consistency
+        nb.totalAllSubmissions = nb.totalAllSubmissions > actualRemoved ? nb.totalAllSubmissions - actualRemoved : 0;
+
+        address provider = computeRegistry.getNodeProvider(node);
+        emit WorkRemoved(poolId, provider, node, actualRemoved);
     }
 }

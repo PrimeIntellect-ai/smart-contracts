@@ -8,6 +8,8 @@ event WorkSubmitted(uint256 poolId, address provider, address nodeId, bytes32 wo
 
 event WorkInvalidated(uint256 poolId, address provider, address nodeId, bytes32 workKey, uint256 workUnits);
 
+event WorkRemoved(uint256 poolId, address provider, address nodeId, uint256 workUnits);
+
 contract SyntheticDataWorkValidator is IWorkValidation {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -82,6 +84,37 @@ contract SyntheticDataWorkValidator is IWorkValidation {
         emit WorkInvalidated(poolId, info.provider, info.nodeId, workKey, info.workUnits);
 
         return (info.provider, info.nodeId);
+    }
+
+    function softInvalidateWork(uint256 poolId, bytes calldata data) external returns (address, address, uint256) {
+        require(msg.sender == computePool, "Unauthorized");
+        require(data.length >= 64, "Data too short for soft invalidation");
+
+        // Decode both workKey and workUnits for soft invalidation
+        bytes32 workKey;
+        uint256 workUnits;
+        assembly {
+            workKey := calldataload(data.offset)
+            workUnits := calldataload(add(data.offset, 32))
+        }
+
+        require(poolWork[poolId].workKeys.contains(workKey), "Work not found");
+        require(!poolWork[poolId].invalidWorkKeys.contains(workKey), "Work already invalidated");
+        require(
+            block.timestamp - poolWork[poolId].work[workKey].timestamp < workValidityPeriod,
+            "Work invalidation window has lapsed"
+        );
+
+        WorkInfo memory info = poolWork[poolId].work[workKey];
+
+        // Move work from valid to invalid (same as hard invalidation)
+        poolWork[poolId].invalidWorkKeys.add(workKey);
+        poolWork[poolId].workKeys.remove(workKey);
+
+        emit WorkRemoved(poolId, info.provider, info.nodeId, workUnits);
+
+        // Return the specified work units to be soft-removed (key difference)
+        return (info.provider, info.nodeId, workUnits);
     }
 
     function getWorkInfo(uint256 poolId, bytes32 workKey) external view returns (WorkInfo memory) {

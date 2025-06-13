@@ -9,6 +9,8 @@ event PendingRewardsSlashed(
     uint256 indexed poolId, address indexed provider, address indexed node, uint256 slashedAmount
 );
 
+event WorkRemoved(uint256 indexed poolId, address indexed provider, address indexed node, uint256 workUnits);
+
 interface IRewardsDistributor {
     function calculateRewards(address node) external view returns (uint256, uint256);
     function claimRewards(address node) external;
@@ -19,4 +21,7 @@ interface IRewardsDistributor {
     function joinPool(address node) external;
     function leavePool(address node) external;
     function submitWork(address node, uint256 workUnits) external;
+
+    // Soft slash function for work removal
+    function removeWork(address node, uint256 workUnits) external;
 }
