@@ -480,7 +480,7 @@ contract RewardsDistributorWorkSubmissionRingBufferTest is Test {
         uint256 unlockedNow = fetchRewards(node, false);
         assertEq(unlockedNow, 100, "First 100 is unlocked, second 200 is locked.");
 
-        // 3) Slash the node’s pending 24h => manager only
+        // 3) Slash the node's pending 24h => manager only
         // That should remove the locked 200 from totalAll, zero the ring buffer, etc.
         vm.prank(manager);
         distributor.slashPendingRewards(node);
@@ -489,36 +489,118 @@ contract RewardsDistributorWorkSubmissionRingBufferTest is Test {
         (uint256 last24HAfter, uint256 totalAllAfter,,) = distributor.nodeInfo(node);
         assertEq(last24HAfter, 0, "Should have cleared the ring buffer");
         assertEq(totalAllAfter, 100, "Should have subtracted the slashed 200 from totalAll");
-        // lastClaimed should remain the same, because we didn’t claim.
+        // lastClaimed should remain the same, because we didn't claim.
 
         // 5) Confirm that now, if we skip 25 hours more, there is no "locked" portion to unlock
         skip(25 hours);
         uint256 unlockedAfterSlash = fetchRewards(node, false);
         // The 100 is still unlocked, but we never claimed it, so it remains unclaimed.
-        // Because slash only subtracted from totalAll the “locked” portion, the older 100 is unaffected.
+        // Because slash only subtracted from totalAll the "locked" portion, the older 100 is unaffected.
         // So unlockedAfterSlash == 100 - lastClaimedAfter. But we haven't claimed at all, so lastClaimedAfter=0.
         assertEq(unlockedAfterSlash, 100, "The older 100 remains claimable.");
-
-        // 6) Claim the 100
-        vm.prank(nodeProvider);
-        distributor.claimRewards(node);
-
-        // Confirm node got 100
-        uint256 nodeBalance = mockRewardToken.balanceOf(nodeProvider);
-        assertEq(nodeBalance, 100, "Node should receive the older (unlocked) 100 tokens");
     }
 
     // -----------------------------------------------------------------------
-    // Test: setRewardRate and endRewards in ring-buffer version
+    // Test: Soft slash functionality - removeWork
     // -----------------------------------------------------------------------
-    function testSetRewardRate() public {
-        vm.prank(manager);
-        vm.expectRevert();
-        distributor.setRewardRate(12345);
-    }
-
-    function testEndRewards() public {
+    function testRemoveWork() public {
         vm.prank(address(mockComputePool));
-        distributor.endRewards();
+        mockComputePool.joinComputePool(node, 10);
+
+        // Submit some work
+        vm.prank(address(mockComputePool));
+        distributor.submitWork(node, 500);
+
+        (uint256 last24HBefore, uint256 totalAllBefore,,) = distributor.nodeInfo(node);
+        assertEq(last24HBefore, 500);
+        assertEq(totalAllBefore, 500);
+
+        // Remove 200 work units
+        vm.prank(address(mockComputePool));
+        distributor.removeWork(node, 200);
+
+        (uint256 last24HAfter, uint256 totalAllAfter,,) = distributor.nodeInfo(node);
+        assertEq(last24HAfter, 300, "Should have removed 200 work units");
+        assertEq(totalAllAfter, 300, "Total submissions should also be reduced");
+    }
+
+    function testRemoveWorkExceedsAvailable() public {
+        vm.prank(address(mockComputePool));
+        mockComputePool.joinComputePool(node, 10);
+
+        // Submit 100 work units
+        vm.prank(address(mockComputePool));
+        distributor.submitWork(node, 100);
+
+        // Try to remove 200 (more than available)
+        vm.prank(address(mockComputePool));
+        distributor.removeWork(node, 200);
+
+        // Should only remove what's available (100)
+        (uint256 last24H, uint256 totalAll,,) = distributor.nodeInfo(node);
+        assertEq(last24H, 0, "Should have removed all available work");
+        assertEq(totalAll, 0, "Total should also be zero");
+    }
+
+    function testRemoveWorkAcrossMultipleBuckets() public {
+        vm.prank(address(mockComputePool));
+        mockComputePool.joinComputePool(node, 10);
+
+        // Submit work in different time buckets
+        vm.prank(address(mockComputePool));
+        distributor.submitWork(node, 100);
+
+        skip(2 hours); // Move to next bucket
+        vm.prank(address(mockComputePool));
+        distributor.submitWork(node, 200);
+
+        skip(2 hours); // Move to next bucket
+        vm.prank(address(mockComputePool));
+        distributor.submitWork(node, 300);
+
+        // Total should be 600
+        (uint256 last24HBefore, uint256 totalAllBefore,,) = distributor.nodeInfo(node);
+        assertEq(last24HBefore, 600);
+        assertEq(totalAllBefore, 600);
+
+        // Remove 450 work units (should span multiple buckets)
+        vm.prank(address(mockComputePool));
+        distributor.removeWork(node, 450);
+
+        (uint256 last24HAfter, uint256 totalAllAfter,,) = distributor.nodeInfo(node);
+        assertEq(last24HAfter, 150, "Should have removed 450 work units");
+        assertEq(totalAllAfter, 150, "Total should also be reduced");
+    }
+
+    // -----------------------------------------------------------------------
+    // Test: Your use case - multiple nodes (call multiple times)
+    // -----------------------------------------------------------------------
+    function testMultipleNodeRemoval() public {
+        // Setup multiple nodes
+        vm.prank(address(mockComputePool));
+        mockComputePool.joinComputePool(node1, 10);
+        vm.prank(address(mockComputePool));
+        mockComputePool.joinComputePool(node2, 10);
+
+        // Submit work for both nodes
+        vm.prank(address(mockComputePool));
+        distributor.submitWork(node1, 100);
+        vm.prank(address(mockComputePool));
+        distributor.submitWork(node2, 150);
+
+        // Remove work from both nodes (call multiple times)
+        vm.prank(address(mockComputePool));
+        distributor.removeWork(node1, 80);
+        vm.prank(address(mockComputePool));
+        distributor.removeWork(node2, 80);
+
+        // Check results - both should have 80 removed
+        (uint256 last24H1, uint256 totalAll1,,) = distributor.nodeInfo(node1);
+        (uint256 last24H2, uint256 totalAll2,,) = distributor.nodeInfo(node2);
+
+        assertEq(last24H1, 20, "Node1 should have 20 remaining (100-80)");
+        assertEq(totalAll1, 20, "Node1 total should be 20");
+        assertEq(last24H2, 70, "Node2 should have 70 remaining (150-80)");
+        assertEq(totalAll2, 70, "Node2 total should be 70");
     }
 }

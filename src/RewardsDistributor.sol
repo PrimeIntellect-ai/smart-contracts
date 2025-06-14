@@ -203,4 +203,11 @@ contract RewardsDistributor is IRewardsDistributor, AccessControlEnumerable {
         workUnits == workUnits;
         return;
     }
+
+    function removeWork(address node, uint256 workUnits) external pure {
+        // suppress warnings - not implemented in this distributor type
+        node;
+        workUnits;
+        return;
+    }
 }

@@ -369,6 +369,21 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
         return (provider, node);
     }
 
+    function softInvalidateWork(uint256 poolId, bytes calldata data)
+        external
+        onlyExistingPool(poolId)
+        onlyRole(PRIME_ROLE)
+        returns (address, address, uint256)
+    {
+        IDomainRegistry.Domain memory domainInfo = domainRegistry.get(pools[poolId].domainId);
+        IWorkValidation workValidation = IWorkValidation(domainInfo.validationLogic);
+        (address provider, address node, uint256 workUnits) = workValidation.softInvalidateWork(poolId, data);
+        IRewardsDistributor rewardsDistributor = poolStates[poolId].rewardsDistributor;
+        rewardsDistributor.removeWork(node, workUnits);
+        // Note: we don't eject the node with soft invalidation
+        return (provider, node, workUnits);
+    }
+
     //
     // Management functions
     //

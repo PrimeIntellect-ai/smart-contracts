@@ -190,4 +190,12 @@ contract RewardsDistributorFixed is IRewardsDistributor, AccessControlEnumerable
         workUnits == workUnits;
         return;
     }
+
+    // Soft slash function for work removal (not implemented in Fixed distributor)
+    function removeWork(address node, uint256 workUnits) external pure {
+        // suppress warnings - not implemented in fixed distributor
+        node;
+        workUnits;
+        return;
+    }
 }
