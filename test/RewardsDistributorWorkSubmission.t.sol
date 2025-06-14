@@ -603,22 +603,4 @@ contract RewardsDistributorWorkSubmissionRingBufferTest is Test {
         assertEq(last24H2, 70, "Node2 should have 70 remaining (150-80)");
         assertEq(totalAll2, 70, "Node2 total should be 70");
     }
-
-    // -----------------------------------------------------------------------
-    // Test: Events emitted correctly
-    // -----------------------------------------------------------------------
-    function testWorkRemovedEvent() public {
-        vm.prank(address(mockComputePool));
-        mockComputePool.joinComputePool(node, 10);
-
-        vm.prank(address(mockComputePool));
-        distributor.submitWork(node, 100);
-
-        // Expect event emission
-        vm.expectEmit(true, true, true, true);
-        emit WorkRemoved(1, nodeProvider, node, 50);
-
-        vm.prank(address(mockComputePool));
-        distributor.removeWork(node, 50);
-    }
 }

@@ -8,7 +8,7 @@ event WorkSubmitted(uint256 poolId, address provider, address nodeId, bytes32 wo
 
 event WorkInvalidated(uint256 poolId, address provider, address nodeId, bytes32 workKey, uint256 workUnits);
 
-event WorkRemoved(uint256 poolId, address provider, address nodeId, uint256 workUnits);
+event WorkRemoved(uint256 poolId, address provider, address nodeId, bytes32 workKey, uint256 workUnits);
 
 contract SyntheticDataWorkValidator is IWorkValidation {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -111,7 +111,7 @@ contract SyntheticDataWorkValidator is IWorkValidation {
         poolWork[poolId].invalidWorkKeys.add(workKey);
         poolWork[poolId].workKeys.remove(workKey);
 
-        emit WorkRemoved(poolId, info.provider, info.nodeId, workUnits);
+        emit WorkRemoved(poolId, info.provider, info.nodeId, workKey, workUnits);
 
         // Return the specified work units to be soft-removed (key difference)
         return (info.provider, info.nodeId, workUnits);

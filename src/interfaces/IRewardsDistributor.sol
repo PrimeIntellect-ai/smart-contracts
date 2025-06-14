@@ -9,8 +9,6 @@ event PendingRewardsSlashed(
     uint256 indexed poolId, address indexed provider, address indexed node, uint256 slashedAmount
 );
 
-event WorkRemoved(uint256 indexed poolId, address indexed provider, address indexed node, uint256 workUnits);
-
 interface IRewardsDistributor {
     function calculateRewards(address node) external view returns (uint256, uint256);
     function claimRewards(address node) external;

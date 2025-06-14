@@ -307,8 +307,5 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
 
         // Also reduce total submissions to maintain consistency
         nb.totalAllSubmissions = nb.totalAllSubmissions > actualRemoved ? nb.totalAllSubmissions - actualRemoved : 0;
-
-        address provider = computeRegistry.getNodeProvider(node);
-        emit WorkRemoved(poolId, provider, node, actualRemoved);
     }
 }
