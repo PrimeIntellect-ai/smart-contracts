@@ -92,6 +92,7 @@ interface IComputePool is IAccessControlEnumerable {
     function ejectNode(uint256 poolId, address nodekey) external;
     function submitWork(uint256 poolId, address nodekey, bytes calldata data) external;
     function invalidateWork(uint256 poolId, bytes calldata data) external returns (address, address);
+    function softInvalidateWork(uint256 poolId, bytes calldata data) external returns (address, address, uint256);
     function blacklistProvider(uint256 poolId, address provider) external;
     function blacklistProviderList(uint256 poolId, address[] memory providers) external;
     function blacklistAndPurgeProvider(uint256 poolId, address provider) external;

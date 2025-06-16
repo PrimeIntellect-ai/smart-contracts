@@ -214,6 +214,16 @@ contract PrimeNetwork is AccessControlEnumerable {
         } catch {}
     }
 
+    function softInvalidateWork(uint256 poolId, bytes calldata data)
+        external
+        onlyRole(VALIDATOR_ROLE)
+        returns (address, address, uint256)
+    {
+        (address provider, address node, uint256 workUnits) = computePool.softInvalidateWork(poolId, data);
+        // Note: No slashing, no node invalidation, no blacklisting - just remove the work
+        return (provider, node, workUnits);
+    }
+
     function _verifyNodekeySignature(address provider, address nodekey, bytes memory signature)
         internal
         view

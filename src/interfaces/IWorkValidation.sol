@@ -7,4 +7,6 @@ interface IWorkValidation {
         returns (bool, uint256);
 
     function invalidateWork(uint256 poolId, bytes calldata data) external returns (address, address);
+
+    function softInvalidateWork(uint256 poolId, bytes calldata data) external returns (address, address, uint256);
 }
