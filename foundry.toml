@@ -5,6 +5,7 @@ libs = ["lib"]
 optimizer = true
 optimizer_runs = 10000000
 fs_permissions = [{ access = "read-write", path = "./release/"}]
+solc_version = "0.8.30"
 
 additional_compiler_profiles = [ 
 	{ name = "general", via_ir = true, optimizer_runs = 1000000 },
