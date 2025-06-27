@@ -289,16 +289,15 @@ contract RewardsDistributorWorkSubmission is IRewardsDistributor, AccessControlE
         uint256 remaining = toRemove;
         uint256 bucketIdx = nb.currentBucket;
 
-        // Remove from buckets, starting with the current one
+        // Remove from buckets, starting with the oldest one
         for (uint256 i = 0; i < NUM_BUCKETS && remaining > 0; i++) {
+            bucketIdx = (bucketIdx + 1) % NUM_BUCKETS; // Move forward in the ring buffer
             uint256 bucketAmount = nb.buckets[bucketIdx];
             if (bucketAmount > 0) {
                 uint256 removeFromBucket = remaining > bucketAmount ? bucketAmount : remaining;
                 nb.buckets[bucketIdx] -= removeFromBucket;
                 remaining -= removeFromBucket;
             }
-            // Move to previous bucket (circular)
-            bucketIdx = bucketIdx == 0 ? NUM_BUCKETS - 1 : bucketIdx - 1;
         }
 
         // Update totals
