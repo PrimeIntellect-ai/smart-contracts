@@ -99,6 +99,13 @@ contract PrimeNetwork is AccessControlEnumerable {
         domainRegistry.updateValidationLogic(domainId, validationLogic);
     }
 
+    function updateDomainParameters(uint256 domainId, string calldata domainParametersURI)
+        external
+        onlyRole(FEDERATOR_ROLE)
+    {
+        domainRegistry.updateParameters(domainId, domainParametersURI);
+    }
+
     function registerProvider(uint256 stake) external {
         uint256 stakeMinimum = stakeManager.getStakeMinimum();
         require(stake >= stakeMinimum, "Stake amount is below minimum");
@@ -114,9 +121,20 @@ contract PrimeNetwork is AccessControlEnumerable {
     function increaseStake(uint256 amount) external {
         address provider = msg.sender;
         require(computeRegistry.checkProviderExists(provider), "Provider not registered");
-        AIToken.transferFrom(msg.sender, address(this), amount);
-        AIToken.approve(address(stakeManager), amount);
-        stakeManager.stake(provider, amount);
+        // check if provider has pending unbonding, if so rebond those
+        uint256 pendingUnbond = stakeManager.getPendingUnbondTotal(provider);
+        if (pendingUnbond > 0) {
+            if (pendingUnbond >= amount) {
+                pendingUnbond = amount; // rebond only the amount we can
+            }
+            amount -= pendingUnbond; // reduce the amount to stake by the rebonded amount
+            stakeManager.rebond(provider, pendingUnbond);
+        }
+        if (amount != 0) {
+            AIToken.transferFrom(msg.sender, address(this), amount);
+            AIToken.approve(address(stakeManager), amount);
+            stakeManager.stake(provider, amount);
+        }
     }
 
     function reclaimStake(uint256 amount) external {
