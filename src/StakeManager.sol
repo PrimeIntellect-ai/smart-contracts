@@ -57,7 +57,7 @@ contract StakeManager is IStakeManager, AccessControlEnumerable {
     }
 
     function rebond(address staker, uint256 amount) external onlyRole(PRIME_ROLE) {
-        require(_unbonding[staker] > amount, "StakeManager: insufficient unbonding balance");
+        require(_unbonding[staker] >= amount, "StakeManager: insufficient unbonding balance");
         _unbonding[staker] -= amount;
         _totalUnbonding -= amount;
         _stakes[staker] += amount;
