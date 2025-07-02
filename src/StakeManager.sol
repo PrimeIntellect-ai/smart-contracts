@@ -123,6 +123,7 @@ contract StakeManager is IStakeManager, AccessControlEnumerable {
                         // slash the difference
                         uint256 diff = unbonding_amount - amount;
                         _totalUnbonding -= (pending.unbonds[i].amount - diff);
+                        _unbonding[staker] -= (pending.unbonds[i].amount - diff);
                         pending.unbonds[i].amount = diff;
                         unbonding_amount = amount;
                         pending.offset = i;
@@ -130,12 +131,14 @@ contract StakeManager is IStakeManager, AccessControlEnumerable {
                     } else if (unbonding_amount == amount) {
                         // slash the whole unbond
                         _totalUnbonding -= pending.unbonds[i].amount;
+                        _unbonding[staker] -= pending.unbonds[i].amount;
                         delete pending.unbonds[i];
                         pending.offset = i + 1;
                         break;
                     } else {
                         // slash the whole unbond and continue
                         _totalUnbonding -= pending.unbonds[i].amount;
+                        _unbonding[staker] -= pending.unbonds[i].amount;
                         delete pending.unbonds[i];
                         pending.offset = i + 1;
                     }
