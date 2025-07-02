@@ -189,7 +189,13 @@ contract StakeManager is IStakeManager, AccessControlEnumerable {
     }
 
     function getPendingUnbonds(address staker) external view returns (Unbond[] memory) {
-        return _unbonds[staker].unbonds;
+        Unbond[] memory unbonds = _unbonds[staker].unbonds;
+        uint256 length = unbonds.length - _unbonds[staker].offset;
+        Unbond[] memory pendingUnbonds = new Unbond[](length);
+        for (uint256 i = 0; i < length; i++) {
+            pendingUnbonds[i] = unbonds[_unbonds[staker].offset + i];
+        }
+        return pendingUnbonds;
     }
 
     function getPendingUnbondTotal(address staker) external view returns (uint256) {

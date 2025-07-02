@@ -133,6 +133,22 @@ contract StakeManagerTest is Test {
         assertEq(arr[0].amount, 60 * ONE);
     }
 
+    function testRebondFull() public {
+        _stake(staker, HUND);
+        _unstake(staker, HUND);
+
+        vm.expectEmit(true, false, false, true);
+        emit Rebond(staker, 100 * ONE);
+
+        vm.prank(prime);
+        mgr.rebond(staker, 100 * ONE);
+
+        assertEq(mgr.getStake(staker), 100 * ONE);
+        assertEq(mgr.getPendingUnbondTotal(staker), 0);
+        StakeManager.Unbond[] memory arr = mgr.getPendingUnbonds(staker);
+        assertEq(arr.length, 0); // all unbonds rebonded
+    }
+
     function testMaxPendingAggregates() public {
         _stake(staker, 1000 * ONE);
 
