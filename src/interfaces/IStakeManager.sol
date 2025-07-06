@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/extensions/IAccessControlEnumerable.sol";
 
 event Stake(address staker, uint256 amount);
 
-event Unstake(address staker, uint256 amount);
+event Unstake(address staker, uint256 amount, uint256 index);
 
 event Withdraw(address staker, uint256 amount);
 
@@ -16,6 +16,10 @@ event Rebond(address staker, uint256 amount);
 event UpdateUnbondingPeriod(uint256 period);
 
 event StakeMinimumUpdate(uint256 minimum);
+
+event PendingBondRemoved(address staker, uint256 amount, uint256 index);
+
+event PendingBondUpdated(address staker, uint256 amount, uint256 index, uint256 timestamp);
 
 interface IStakeManager is IAccessControlEnumerable {
     struct Unbond {
@@ -35,6 +39,7 @@ interface IStakeManager is IAccessControlEnumerable {
     function getStake(address staker) external view returns (uint256);
     function getTotalStaked() external view returns (uint256);
     function getPendingUnbonds(address staker) external view returns (Unbond[] memory);
+    function getUnbondAtIndex(address staker, uint256 index) external view returns (Unbond memory);
     function getPendingUnbondTotal(address staker) external view returns (uint256);
     function getUnbondingPeriod() external view returns (uint256);
     function getTotalUnbonding() external view returns (uint256);

@@ -156,7 +156,7 @@ contract ComputePool is IComputePool, AccessControlEnumerable {
 
         poolIdCounter++;
 
-        emit ComputePoolCreated(poolIdCounter - 1, domainId, msg.sender);
+        emit ComputePoolCreated(poolIdCounter - 1, domainId, msg.sender, computeManagerKey, computeLimit, poolDataURI);
 
         return poolIdCounter - 1;
     }

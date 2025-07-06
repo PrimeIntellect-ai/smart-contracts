@@ -5,7 +5,14 @@ import "./IComputeRegistry.sol";
 import "./IRewardsDistributor.sol";
 import "@openzeppelin/contracts/access/extensions/IAccessControlEnumerable.sol";
 
-event ComputePoolCreated(uint256 indexed poolId, uint256 indexed domainId, address indexed creator);
+event ComputePoolCreated(
+    uint256 indexed poolId,
+    uint256 indexed domainId,
+    address indexed creator,
+    address manager,
+    uint256 limit,
+    string uri
+);
 
 event ComputePoolStarted(uint256 indexed poolId, uint256 timestamp);
 

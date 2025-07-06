@@ -30,7 +30,7 @@ contract DomainRegistry is IDomainRegistry, AccessControlEnumerable {
 
         domains.push(domain);
 
-        emit DomainCreated(name, domain.domainId);
+        emit DomainCreated(name, domain.domainId, address(validationContract), domainParametersURI);
 
         return domain.domainId;
     }

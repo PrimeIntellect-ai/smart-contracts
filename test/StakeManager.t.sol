@@ -79,7 +79,7 @@ contract StakeManagerTest is Test {
         _stake(staker, HUND);
 
         vm.expectEmit(true, false, false, true);
-        emit Unstake(staker, 40 * ONE);
+        emit Unstake(staker, 40 * ONE, 0);
 
         _unstake(staker, 40 * ONE);
 
