@@ -5,7 +5,7 @@ import "./IWorkValidation.sol";
 import "./IComputePool.sol";
 import "@openzeppelin/contracts/access/extensions/IAccessControlEnumerable.sol";
 
-event DomainCreated(string domainName, uint256 domainId);
+event DomainCreated(string domainName, uint256 domainId, address validationLogic, string domainParametersURI);
 
 event DomainUpdated(uint256 domainId, address validationLogic, string domainParametersURI);
 

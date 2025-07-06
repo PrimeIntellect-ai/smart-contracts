@@ -46,14 +46,16 @@ contract StakeManager is IStakeManager, AccessControlEnumerable {
         _totalUnbonding += amount;
         if (_unbonds[staker].unbonds.length - _unbonds[staker].offset >= MAX_PENDING_UNBONDS) {
             // add to the newest unbond and reset the time
+            uint256 newExpiry = block.timestamp + _unbondingPeriod;
             UnbondTracker storage pending = _unbonds[staker];
             pending.unbonds[pending.unbonds.length - 1].amount += amount;
-            pending.unbonds[pending.unbonds.length - 1].timestamp = block.timestamp + _unbondingPeriod;
+            pending.unbonds[pending.unbonds.length - 1].timestamp = newExpiry;
+            emit PendingBondUpdated(staker, amount, pending.unbonds.length - 1, newExpiry);
         } else {
             // add a new unbond
             _unbonds[staker].unbonds.push(Unbond(amount, block.timestamp + _unbondingPeriod));
         }
-        emit Unstake(staker, amount);
+        emit Unstake(staker, amount, _unbonds[staker].unbonds.length - 1);
     }
 
     function rebond(address staker, uint256 amount) external onlyRole(PRIME_ROLE) {
@@ -71,12 +73,14 @@ contract StakeManager is IStakeManager, AccessControlEnumerable {
                 rebonded += unbond_amount;
                 delete pending.unbonds[i];
                 pending.offset = i + 1;
+                emit PendingBondRemoved(staker, unbond_amount, i);
             } else {
                 // only part of the unbond is rebonded
                 uint256 leftover = unbond_amount + rebonded - amount;
                 pending.unbonds[i].amount = leftover;
                 rebonded = amount;
                 pending.offset = i;
+                emit PendingBondUpdated(staker, leftover, i, pending.unbonds[i].timestamp);
                 break;
             }
         }
@@ -94,6 +98,7 @@ contract StakeManager is IStakeManager, AccessControlEnumerable {
                 _totalUnbonding -= pending[i].amount;
                 _unbonding[msg.sender] -= pending[i].amount;
                 delete pending[i];
+                emit PendingBondRemoved(msg.sender, pending[i].amount, i);
             } else {
                 _unbonds[msg.sender].offset = i;
                 break;
@@ -127,20 +132,18 @@ contract StakeManager is IStakeManager, AccessControlEnumerable {
                         pending.unbonds[i].amount = diff;
                         unbonding_amount = amount;
                         pending.offset = i;
+                        emit PendingBondUpdated(staker, diff, i, pending.unbonds[i].timestamp);
                         break;
-                    } else if (unbonding_amount == amount) {
+                    } else {
                         // slash the whole unbond
                         _totalUnbonding -= pending.unbonds[i].amount;
                         _unbonding[staker] -= pending.unbonds[i].amount;
                         delete pending.unbonds[i];
                         pending.offset = i + 1;
-                        break;
-                    } else {
-                        // slash the whole unbond and continue
-                        _totalUnbonding -= pending.unbonds[i].amount;
-                        _unbonding[staker] -= pending.unbonds[i].amount;
-                        delete pending.unbonds[i];
-                        pending.offset = i + 1;
+                        emit PendingBondRemoved(staker, pending.unbonds[i].amount, i);
+                        if (unbonding_amount == amount) {
+                            break;
+                        }
                     }
                 }
             }
@@ -196,6 +199,11 @@ contract StakeManager is IStakeManager, AccessControlEnumerable {
             pendingUnbonds[i] = unbonds[_unbonds[staker].offset + i];
         }
         return pendingUnbonds;
+    }
+
+    function getUnbondAtIndex(address staker, uint256 index) external view returns (Unbond memory) {
+        require(index < _unbonds[staker].unbonds.length, "StakeManager: index out of bounds");
+        return _unbonds[staker].unbonds[_unbonds[staker].offset + index];
     }
 
     function getPendingUnbondTotal(address staker) external view returns (uint256) {
